@@ -32,6 +32,8 @@ final class SupabaseAuthService {
     private let configuration: SupabaseConfiguration
     private let sessionStore: SupabaseSessionStore
     private let session: URLSession
+    private let authStateQueue = DispatchQueue(label: "supabase.auth.state")
+    private var inFlightAuthentication: AnyPublisher<Void, Error>?
 
     init(
         configuration: SupabaseConfiguration,
@@ -45,22 +47,50 @@ final class SupabaseAuthService {
 
     func ensureAuthenticated(client: SupabaseClient) -> AnyPublisher<Void, Error> {
         if let token = sessionStore.accessToken, !token.isEmpty {
+            // Fast path for recurring calls (e.g., score polling): avoid extra auth/profile RPCs.
+            if let userId = sessionStore.userId, !userId.isEmpty {
+                return Just(())
+                    .setFailureType(to: Error.self)
+                    .eraseToAnyPublisher()
+            }
             return ensureProfile(client: client).eraseToAnyPublisher()
         }
 
-        return signUpAnonymous()
-            .handleEvents(receiveOutput: { [weak self] response in
-                self?.sessionStore.accessToken = response.accessToken
-                self?.sessionStore.userId = response.user.id
-                self?.sessionStore.displayName = response.user.userMetadata?.displayName
-            })
-            .flatMap { [weak self] _ -> AnyPublisher<Void, Error> in
-                guard let self else {
-                    return Fail(error: SupabaseClientError.invalidResponse).eraseToAnyPublisher()
-                }
-                return self.ensureProfile(client: client).eraseToAnyPublisher()
+        return authStateQueue.sync {
+            if let inFlightAuthentication {
+                return inFlightAuthentication
             }
-            .eraseToAnyPublisher()
+
+            let publisher = signUpAnonymous()
+                .handleEvents(receiveOutput: { [weak self] response in
+                    self?.sessionStore.accessToken = response.accessToken
+                    self?.sessionStore.userId = response.user.id
+                    self?.sessionStore.displayName = response.user.userMetadata?.displayName
+                })
+                .flatMap { [weak self] _ -> AnyPublisher<Void, Error> in
+                    guard let self else {
+                        return Fail(error: SupabaseClientError.invalidResponse).eraseToAnyPublisher()
+                    }
+                    return self.ensureProfile(client: client).eraseToAnyPublisher()
+                }
+                .handleEvents(
+                    receiveCompletion: { [weak self] _ in
+                        self?.authStateQueue.async {
+                            self?.inFlightAuthentication = nil
+                        }
+                    },
+                    receiveCancel: { [weak self] in
+                        self?.authStateQueue.async {
+                            self?.inFlightAuthentication = nil
+                        }
+                    }
+                )
+                .share()
+                .eraseToAnyPublisher()
+
+            inFlightAuthentication = publisher
+            return publisher
+        }
     }
 
     private func ensureProfile(client: SupabaseClient) -> AnyPublisher<Void, Error> {

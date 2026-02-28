@@ -16,9 +16,16 @@ struct SupabaseConfiguration {
 
     static var fromBundle: SupabaseConfiguration? {
         guard
-            let urlString = Bundle.main.object(forInfoDictionaryKey: "SUPABASE_URL") as? String,
+            let rawURLString = Bundle.main.object(forInfoDictionaryKey: "SUPABASE_URL") as? String,
+            let rawAnonKey = Bundle.main.object(forInfoDictionaryKey: "SUPABASE_ANON_KEY") as? String
+        else {
+            return nil
+        }
+
+        let urlString = rawURLString.trimmingCharacters(in: .whitespacesAndNewlines)
+        let anonKey = rawAnonKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard
             let url = URL(string: urlString),
-            let anonKey = Bundle.main.object(forInfoDictionaryKey: "SUPABASE_ANON_KEY") as? String,
             !anonKey.isEmpty
         else {
             return nil
