@@ -4,7 +4,15 @@
 
 ## Setup
 
-### 1. Install XcodeGen
+### 1. Open in Xcode (fastest path)
+
+After cloning, open:
+
+- `ScrollRoyale/ScrollRoyale.xcodeproj`
+
+Then choose a simulator and run.
+
+### 2. (Optional) Regenerate project with XcodeGen
 
 If you don't have [XcodeGen](https://github.com/yonaskolb/XcodeGen) yet, install it via Homebrew:
 
@@ -13,16 +21,14 @@ If you don't have [XcodeGen](https://github.com/yonaskolb/XcodeGen) yet, install
 brew install xcodegen
 ```
 
-### 2. Generate the Xcode Project
-
-From the project root:
+If you want to regenerate the project from `project.yml`:
 
 ```bash
 cd ScrollRoyale
 xcodegen generate
 ```
 
-This creates `ScrollRoyale.xcodeproj`. Open it in Xcode and run the app.
+This rewrites `ScrollRoyale.xcodeproj`.
 
 ## Project Structure
 
