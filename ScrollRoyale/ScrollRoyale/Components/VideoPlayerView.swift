@@ -1,5 +1,6 @@
 import SwiftUI
 import AVKit
+import os
 
 /// AVPlayer wrapper for MP4 playback - supports looping and playback control
 struct VideoPlayerView: View {
@@ -42,6 +43,8 @@ private struct VideoPlayerViewRepresentable: UIViewRepresentable {
 }
 
 private final class PlayerUIView: UIView {
+    private static let logger = Logger(subsystem: "com.scrollroyale.app", category: "VideoPlayer")
+
     private var player: AVPlayer?
     private var playerLayer: AVPlayerLayer?
     private var timeObserver: Any?
@@ -64,6 +67,8 @@ private final class PlayerUIView: UIView {
 
     func configure(url: URL) {
         player?.pause()
+        NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: nil)
+        NotificationCenter.default.removeObserver(self, name: .AVPlayerItemFailedToPlayToEndTime, object: nil)
         let playerItem = AVPlayerItem(url: url)
         let newPlayer = AVPlayer(playerItem: playerItem)
         newPlayer.actionAtItemEnd = .none
@@ -72,6 +77,12 @@ private final class PlayerUIView: UIView {
             self,
             selector: #selector(playerDidFinish),
             name: .AVPlayerItemDidPlayToEndTime,
+            object: playerItem
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(playerDidFailToPlayToEnd(_:)),
+            name: .AVPlayerItemFailedToPlayToEndTime,
             object: playerItem
         )
 
@@ -103,6 +114,12 @@ private final class PlayerUIView: UIView {
     @objc private func playerDidFinish() {
         player?.seek(to: .zero)
         player?.play()
+    }
+
+    @objc private func playerDidFailToPlayToEnd(_ notification: Notification) {
+        let error = notification.userInfo?[AVPlayerItemFailedToPlayToEndTimeErrorKey] as? NSError
+        let message = error?.localizedDescription ?? "Unknown AVPlayer error"
+        Self.logger.error("Playback failed for \(String(describing: self.player?.currentItem?.asset), privacy: .public): \(message, privacy: .public)")
     }
 
     func setPlaying(_ playing: Bool) {

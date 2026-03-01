@@ -48,6 +48,26 @@ This rewrites `ScrollRoyale.xcodeproj`.
    - `SUPABASE_ANON_KEY`
 3. Upload your MP4s and make sure reel `storage_path` values point to playable URLs/signed URLs.
 
+## Supabase Cache Tuning
+
+Client-side cache and latency behavior is tuned in these files:
+- `ScrollRoyale/Services/Cache/SupabaseCachePolicy.swift` (TTL values)
+- `ScrollRoyale/Services/ContentService.swift` (feed stale-while-revalidate + request coalescing)
+- `ScrollRoyale/Services/SyncService.swift` (adaptive score polling)
+- `ScrollRoyale/Services/SupabaseAuthService.swift` (proactive token refresh)
+
+Recommended operational targets:
+- Feed cache hit ratio: >= 60% during active gameplay sessions.
+- Score snapshot latency (p95): <= 1000ms after warm-up.
+- Feed fetch latency (p95): <= 1500ms on stable mobile/Wi-Fi.
+- Auth refresh success rate: >= 99% (excluding offline sessions).
+
+Primary tuning knobs:
+- `feedTTL` in `SupabaseCachePolicy.default` (default 30s).
+- `scoreTTL` in `SupabaseCachePolicy.default` (default 1.0s).
+- Warm-up score poll interval in `SupabaseSyncService.connect` (default 0.4s for first 5s).
+- Steady score poll interval in `SupabaseSyncService.connect` (default 1.0s).
+
 ## Current Status
 
 - App architecture is wired for Supabase-backed matchmaking, feed fetching, telemetry ingestion, and score snapshots.

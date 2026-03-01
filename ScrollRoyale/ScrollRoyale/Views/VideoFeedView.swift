@@ -8,12 +8,17 @@ struct VideoFeedView: View {
     let onScroll: (Double, Int, Double) -> Void
 
     var body: some View {
-        ScrollViewReader { proxy in
+        GeometryReader { geometry in
+            let viewportHeight = max(1, geometry.size.height)
+
             ScrollView {
                 LazyVStack(spacing: 0) {
                     ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
                         VideoCellView(
                             item: item,
+                            index: index,
+                            totalCount: items.count,
+                            cellHeight: viewportHeight,
                             isActive: index == currentIndex,
                             playbackTime: index == currentIndex ? playbackTime : 0,
                             onPlaybackTimeUpdate: index == currentIndex ? { time in
@@ -38,7 +43,7 @@ struct VideoFeedView: View {
             .onPreferenceChange(ScrollOffsetPreferenceKey.self) { value in
                 let offset = -value
                 scrollOffset = max(0, offset)
-                let newIndex = Int(offset / UIScreen.main.bounds.height)
+                let newIndex = Int(offset / viewportHeight)
                 if newIndex >= 0 && newIndex < items.count && newIndex != currentIndex {
                     currentIndex = newIndex
                 }

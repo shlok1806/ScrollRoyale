@@ -7,48 +7,50 @@ struct LobbyView: View {
 
     var body: some View {
         ZStack {
-            LinearGradient(
-                colors: [
-                    Color(red: 0.1, green: 0.05, blue: 0.2),
-                    Color(red: 0.05, green: 0.02, blue: 0.15)
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
+            ArcadeBackground()
+                .ignoresSafeArea()
 
-            VStack(spacing: 32) {
-                Text("Scroll Royale")
-                    .font(.system(size: 42, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 20) {
+                    VStack(spacing: 8) {
+                        Text("TODAY'S BATTLE")
+                            .font(.system(size: 32, weight: .black, design: .rounded))
+                            .foregroundStyle(.white)
 
-                Text("1v1 Competitive Doomscrolling")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.7))
+                        Text("1v1 COMPETITIVE DOOMSCROLLING")
+                            .font(.system(size: 13, weight: .black, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.86))
+                            .tracking(0.6)
+                    }
+                    .padding(.top, 6)
 
-                Spacer()
-
-                if viewModel.isLoading {
-                    ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                        .scaleEffect(1.5)
-                    Text(viewModel.statusMessage.isEmpty ? "Loading..." : viewModel.statusMessage)
-                        .font(.subheadline)
-                        .foregroundStyle(.white.opacity(0.8))
-                } else if let error = viewModel.errorMessage {
-                    Text(error)
-                        .font(.subheadline)
-                        .foregroundStyle(.red)
-                        .multilineTextAlignment(.center)
-                        .padding()
-                } else {
-                    lobbyContent
-                        .padding(.horizontal, 40)
+                    if viewModel.isLoading {
+                        VStack(spacing: 10) {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                .scaleEffect(1.25)
+                            Text(viewModel.statusMessage.isEmpty ? "PREPARING MATCH..." : viewModel.statusMessage.uppercased())
+                                .font(.system(size: 14, weight: .bold, design: .rounded))
+                                .foregroundStyle(.white.opacity(0.85))
+                                .multilineTextAlignment(.center)
+                        }
+                        .padding(.vertical, 24)
+                    } else if let error = viewModel.errorMessage {
+                        ArcadePanel(fill: Color(red: 0.96, green: 0.24, blue: 0.45)) {
+                            Text(error)
+                                .font(.system(size: 14, weight: .black, design: .rounded))
+                                .foregroundStyle(.white)
+                                .multilineTextAlignment(.center)
+                        }
+                    } else {
+                        lobbyContent
+                    }
                 }
-
-                Spacer()
+                .frame(maxWidth: 460)
+                .padding(.horizontal, 20)
+                .padding(.top, 54)
+                .padding(.bottom, 28)
             }
-            .padding(.top, 60)
         }
         .onChange(of: viewModel.currentMatch) { match in
             if let match, match.status == .inProgress {
@@ -83,141 +85,208 @@ struct LobbyView: View {
     }
 
     private var idleContent: some View {
-        VStack(spacing: 16) {
-            Picker("Match Length", selection: $viewModel.selectedDuration) {
-                ForEach(MatchDuration.allCases) { duration in
-                    Text(duration.label).tag(duration)
+        ArcadePanel(fill: Color(red: 0.48, green: 0.17, blue: 0.75)) {
+            VStack(spacing: 14) {
+                Text("READY FOR BATTLE?")
+                    .font(.system(size: 22, weight: .black, design: .rounded))
+                    .foregroundStyle(.white)
+
+                Picker("Match Length", selection: $viewModel.selectedDuration) {
+                    ForEach(MatchDuration.allCases) { duration in
+                        Text(duration.label).tag(duration)
+                    }
                 }
-            }
-            .pickerStyle(.segmented)
-            .padding(.bottom, 4)
+                .pickerStyle(.segmented)
 
-            Button {
-                viewModel.createMatch()
-            } label: {
-                Text("Create Match")
-                    .font(.headline)
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(
-                        RoundedRectangle(cornerRadius: 16)
-                            .fill(Color(red: 0.6, green: 0.2, blue: 1.0))
-                    )
-            }
-            .disabled(viewModel.isLoading)
+                Button {
+                    viewModel.createMatch()
+                } label: {
+                    Text("CREATE MATCH")
+                }
+                .buttonStyle(ArcadePrimaryButtonStyle(color: Color(red: 0.22, green: 1.0, blue: 0.08), textColor: .black))
 
-            Button {
-                viewModel.beginJoinFlow()
-            } label: {
-                Text("Join with Code")
-                    .font(.headline)
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(Color.white.opacity(0.5), lineWidth: 2)
-                    )
+                Button {
+                    viewModel.beginJoinFlow()
+                } label: {
+                    Text("JOIN WITH CODE")
+                }
+                .buttonStyle(ArcadePrimaryButtonStyle(color: Color(red: 0.3, green: 0.79, blue: 0.94), textColor: .black))
             }
-            .disabled(viewModel.isLoading)
         }
+        .disabled(viewModel.isLoading)
     }
 
     private var hostingContent: some View {
-        VStack(spacing: 18) {
-            Text("Share this match code")
-                .font(.headline)
-                .foregroundStyle(.white.opacity(0.9))
+        ArcadePanel(fill: Color(red: 0.48, green: 0.17, blue: 0.75)) {
+            VStack(spacing: 18) {
+                Text("SHARE THIS MATCH CODE")
+                    .font(.system(size: 16, weight: .black, design: .rounded))
+                    .foregroundStyle(.white)
 
-            Text(viewModel.hostedMatchCode.isEmpty ? "------" : viewModel.hostedMatchCode)
-                .font(.system(size: 34, weight: .bold, design: .monospaced))
-                .kerning(3)
-                .foregroundStyle(.white)
-                .padding(.vertical, 18)
+                Text(viewModel.hostedMatchCode.isEmpty ? "------" : viewModel.hostedMatchCode)
+                    .font(.system(size: 34, weight: .bold, design: .monospaced))
+                    .kerning(3)
+                    .foregroundStyle(.white)
+                    .padding(.vertical, 18)
+                    .frame(maxWidth: .infinity)
+                    .background(Color(red: 1.0, green: 0.0, blue: 0.43))
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(Color.black, lineWidth: 3)
+                    )
+
+                if !viewModel.statusMessage.isEmpty {
+                    Text(viewModel.statusMessage)
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.84))
+                        .multilineTextAlignment(.center)
+                }
+
+                HStack(spacing: 12) {
+                    Button {
+                        UIPasteboard.general.string = viewModel.hostedMatchCode
+                    } label: {
+                        Text("COPY CODE")
+                    }
+                    .buttonStyle(ArcadePrimaryButtonStyle(color: Color(red: 0.3, green: 0.79, blue: 0.94), textColor: .black))
+
+                    Button {
+                        viewModel.cancelHostedMatch()
+                    } label: {
+                        Text("CANCEL")
+                    }
+                    .buttonStyle(ArcadePrimaryButtonStyle(color: Color(red: 0.96, green: 0.24, blue: 0.45), textColor: .white))
+                }
                 .frame(maxWidth: .infinity)
-                .background(Color.white.opacity(0.12))
-                .clipShape(RoundedRectangle(cornerRadius: 14))
-
-            if !viewModel.statusMessage.isEmpty {
-                Text(viewModel.statusMessage)
-                    .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.75))
-                    .multilineTextAlignment(.center)
-            }
-
-            HStack(spacing: 12) {
-                Button {
-                    UIPasteboard.general.string = viewModel.hostedMatchCode
-                } label: {
-                    Text("Copy Code")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(Color.white.opacity(0.2))
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                }
-
-                Button {
-                    viewModel.cancelHostedMatch()
-                } label: {
-                    Text("Cancel")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(Color.red.opacity(0.4))
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                }
             }
         }
     }
 
     private var joiningContent: some View {
-        VStack(spacing: 16) {
-            Text("Enter match code")
-                .font(.headline)
-                .foregroundStyle(.white.opacity(0.9))
-
-            TextField("A7K2P9", text: $viewModel.joinCodeInput)
-                .textInputAutocapitalization(.characters)
-                .autocorrectionDisabled(true)
-                .font(.system(size: 28, weight: .bold, design: .monospaced))
-                .multilineTextAlignment(.center)
-                .padding(.vertical, 14)
-                .padding(.horizontal, 12)
-                .background(Color.white.opacity(0.12))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-
-            Button {
-                viewModel.joinMatchWithCode()
-            } label: {
-                Text("Join Match")
-                    .font(.headline)
+        ArcadePanel(fill: Color(red: 0.48, green: 0.17, blue: 0.75)) {
+            VStack(spacing: 16) {
+                Text("ENTER A 6-CHARACTER CODE")
+                    .font(.system(size: 18, weight: .black, design: .rounded))
                     .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(
-                        RoundedRectangle(cornerRadius: 16)
-                            .fill(Color(red: 0.6, green: 0.2, blue: 1.0))
-                    )
-            }
-            .disabled(viewModel.joinCodeInput.count != 6 || viewModel.isLoading)
 
-            Button {
-                viewModel.backToIdle()
-            } label: {
-                Text("Back")
-                    .font(.headline)
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
+                TextField("A7K2P9", text: $viewModel.joinCodeInput)
+                    .textInputAutocapitalization(.characters)
+                    .autocorrectionDisabled(true)
+                    .font(.system(size: 28, weight: .bold, design: .monospaced))
+                    .multilineTextAlignment(.center)
                     .padding(.vertical, 14)
-                    .background(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(Color.white.opacity(0.5), lineWidth: 2)
+                    .padding(.horizontal, 12)
+                    .background(Color(red: 0.99, green: 0.84, blue: 0.04))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.black, lineWidth: 3)
                     )
+                    .foregroundStyle(.black)
+
+                Button {
+                    viewModel.joinMatchWithCode()
+                } label: {
+                    Text("JOIN MATCH")
+                }
+                .buttonStyle(ArcadePrimaryButtonStyle(color: Color(red: 0.22, green: 1.0, blue: 0.08), textColor: .black))
+                .disabled(viewModel.joinCodeInput.count != 6 || viewModel.isLoading)
+
+                Button {
+                    viewModel.backToIdle()
+                } label: {
+                    Text("BACK")
+                }
+                .buttonStyle(ArcadePrimaryButtonStyle(color: Color(red: 0.3, green: 0.79, blue: 0.94), textColor: .black))
             }
         }
+    }
+}
+
+private struct ArcadeBackground: View {
+    var body: some View {
+        ZStack {
+            LinearGradient(
+                colors: [
+                    Color(red: 0.05, green: 0.04, blue: 0.09),
+                    Color(red: 0.02, green: 0.02, blue: 0.05)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+
+            GeometryReader { geometry in
+                Path { path in
+                    let spacing: CGFloat = 26
+                    let width = geometry.size.width
+                    let height = geometry.size.height
+                    var x: CGFloat = -height
+                    while x < width + height {
+                        path.move(to: CGPoint(x: x, y: 0))
+                        path.addLine(to: CGPoint(x: x + height, y: height))
+                        x += spacing
+                    }
+                }
+                .stroke(Color.white.opacity(0.06), lineWidth: 2)
+            }
+
+            LinearGradient(
+                colors: [Color.black.opacity(0.08), Color.black.opacity(0.36)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        }
+    }
+}
+
+private struct ArcadePanel<Content: View>: View {
+    let fill: Color
+    let content: Content
+
+    init(fill: Color, @ViewBuilder content: () -> Content) {
+        self.fill = fill
+        self.content = content()
+    }
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 20)
+                .fill(fill)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20)
+                        .stroke(Color.black, lineWidth: 4)
+                )
+                .shadow(color: Color.black.opacity(0.85), radius: 0, x: 0, y: 7)
+
+            content
+                .padding(16)
+        }
+    }
+}
+
+private struct ArcadePrimaryButtonStyle: ButtonStyle {
+    let color: Color
+    let textColor: Color
+
+    func makeBody(configuration: Configuration) -> some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 12)
+                .fill(color)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.black, lineWidth: 3)
+                )
+                .shadow(color: Color.black.opacity(0.85), radius: 0, x: 0, y: 5)
+
+            configuration.label
+                .font(.system(size: 17, weight: .black, design: .rounded))
+                .foregroundStyle(textColor)
+                .tracking(0.5)
+                .frame(maxWidth: .infinity)
+                .frame(minHeight: 52)
+        }
+            .scaleEffect(configuration.isPressed ? 0.98 : 1)
+            .offset(y: configuration.isPressed ? 1 : 0)
     }
 }

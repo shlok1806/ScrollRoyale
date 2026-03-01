@@ -82,11 +82,15 @@ final class MockSyncService: SyncServiceProtocol {
 final class SupabaseSyncService: SyncServiceProtocol {
     private let client: SupabaseClient
     private let authService: SupabaseAuthService
+    private let cacheStore: SupabaseCacheStore
     private let gameStateSubject = PassthroughSubject<GameState, Never>()
     private let scoreSubject = PassthroughSubject<ScoreSnapshot, Never>()
     private var scorePoller: AnyCancellable?
     private var currentMatchId: String?
     private var currentUserId: String?
+    private var connectedAt: Date?
+    private var lastScorePollAt: Date = .distantPast
+    private var scoreRequestInFlight = false
 
     var gameStatePublisher: AnyPublisher<GameState, Never> {
         gameStateSubject.eraseToAnyPublisher()
@@ -96,19 +100,27 @@ final class SupabaseSyncService: SyncServiceProtocol {
         scoreSubject.eraseToAnyPublisher()
     }
 
-    init(client: SupabaseClient, authService: SupabaseAuthService) {
+    init(client: SupabaseClient, authService: SupabaseAuthService, cacheStore: SupabaseCacheStore = .shared) {
         self.client = client
         self.authService = authService
+        self.cacheStore = cacheStore
     }
 
     func connect(to matchId: String, userId: String) {
         currentMatchId = matchId
         currentUserId = userId
+        connectedAt = Date()
+        lastScorePollAt = .distantPast
+        scoreRequestInFlight = false
         _ = authService.ensureAuthenticated(client: client)
             .sink(receiveCompletion: { _ in }, receiveValue: { _ in })
 
-        // Until websocket protocol is wired, use a lightweight polling fallback.
-        scorePoller = Timer.publish(every: 1.0, on: .main, in: .common)
+        if let cachedSnapshot = cacheStore.score(matchId: matchId, userId: userId) {
+            scoreSubject.send(cachedSnapshot)
+        }
+
+        // Use an adaptive polling fallback: burst on connect, then settle to 1s.
+        scorePoller = Timer.publish(every: 0.35, on: .main, in: .common)
             .autoconnect()
             .flatMap { [weak self] _ -> AnyPublisher<ScoreSnapshot, Never> in
                 guard
@@ -118,8 +130,31 @@ final class SupabaseSyncService: SyncServiceProtocol {
                 else {
                     return Empty().eraseToAnyPublisher()
                 }
+                let now = Date()
+                let warmupInterval: TimeInterval = 0.4
+                let steadyInterval: TimeInterval = 1.0
+                let elapsed = now.timeIntervalSince(self.connectedAt ?? now)
+                let requiredInterval = elapsed < 5 ? warmupInterval : steadyInterval
+                guard now.timeIntervalSince(self.lastScorePollAt) >= requiredInterval else {
+                    return Empty().eraseToAnyPublisher()
+                }
+                guard !self.scoreRequestInFlight else {
+                    return Empty().eraseToAnyPublisher()
+                }
+                self.lastScorePollAt = now
+                self.scoreRequestInFlight = true
                 return self.fetchLatestScore(matchId: matchId, userId: userId)
-                    .replaceError(with: ScoreSnapshot(matchId: matchId, userId: userId, score: 0, metrics: [:], snapshotAt: Date()))
+                    .handleEvents(receiveOutput: { [weak self] snapshot in
+                        self?.cacheStore.setScore(snapshot)
+                    }, receiveCompletion: { [weak self] _ in
+                        self?.scoreRequestInFlight = false
+                    }, receiveCancel: { [weak self] in
+                        self?.scoreRequestInFlight = false
+                    })
+                    .replaceError(
+                        with: self.cacheStore.score(matchId: matchId, userId: userId)
+                            ?? ScoreSnapshot(matchId: matchId, userId: userId, score: 0, metrics: [:], snapshotAt: Date())
+                    )
                     .eraseToAnyPublisher()
             }
             .sink { [weak self] snapshot in
@@ -161,6 +196,8 @@ final class SupabaseSyncService: SyncServiceProtocol {
         scorePoller = nil
         currentMatchId = nil
         currentUserId = nil
+        connectedAt = nil
+        scoreRequestInFlight = false
     }
 
     private func fetchLatestScore(matchId: String, userId: String) -> AnyPublisher<ScoreSnapshot, Error> {
@@ -169,7 +206,9 @@ final class SupabaseSyncService: SyncServiceProtocol {
                 client.rpc(
                     function: "latest_score_snapshot",
                     body: ["p_match_id": matchId, "p_user_id": userId],
-                    decodeAs: SupabaseScoreSnapshotDTO.self
+                    decodeAs: SupabaseScoreSnapshotDTO.self,
+                    retryPolicy: .reads,
+                    requestLabel: "latest_score_snapshot"
                 )
             }
             .map { $0.toModel(matchId: matchId, userId: userId) }

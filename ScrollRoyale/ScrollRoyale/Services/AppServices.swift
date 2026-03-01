@@ -31,4 +31,18 @@ enum AppServices {
         }
         return SupabaseSyncService(client: client, authService: authService)
     }
+
+    static func leaderboardService() -> LeaderboardServiceProtocol {
+        guard let (client, authService) = supabaseBundle else {
+            return MockLeaderboardService.shared
+        }
+        return SupabaseLeaderboardService(client: client, authService: authService)
+    }
+
+    static func profileService() -> ProfileServiceProtocol {
+        guard let (client, authService) = supabaseBundle else {
+            return MockProfileService.shared
+        }
+        return SupabaseProfileService(client: client, authService: authService)
+    }
 }
