@@ -151,6 +151,32 @@ final class SupabaseClient {
             .eraseToAnyPublisher()
     }
 
+    /// Calls an RPC that PostgREST returns as a JSON array and unwraps the first row.
+    /// Use this for RPCs declared as `RETURNS SETOF` / `RETURNS TABLE` that always
+    /// produce at most one row (e.g. latest_score_snapshot).
+    func rpcFirstRow<T: Decodable>(
+        function: String,
+        body: [String: Any],
+        decodeAs: T.Type,
+        retryPolicy: SupabaseRetryPolicy = .none,
+        requestLabel: String? = nil
+    ) -> AnyPublisher<T, Error> {
+        rpc(
+            function: function,
+            body: body,
+            decodeAs: [T].self,
+            retryPolicy: retryPolicy,
+            requestLabel: requestLabel ?? "rpc.\(function)"
+        )
+        .tryMap { rows -> T in
+            guard let first = rows.first else {
+                throw SupabaseClientError.serverError("[\(function)] returned empty array — no score row yet")
+            }
+            return first
+        }
+        .eraseToAnyPublisher()
+    }
+
     /// Generic REST table SELECT. Pass `accessToken: nil` for unauthenticated (anon-key-only) reads.
     func select<T: Decodable>(
         table: String,
@@ -276,13 +302,27 @@ final class SupabaseClient {
                     }
                     return data
                 }
-                .decode(type: T.self, decoder: self.decoder)
+                .flatMap { data -> AnyPublisher<T, Error> in
+                    // Try to decode; on failure, log the raw body so the error is diagnosable.
+                    do {
+                        let decoded = try self.decoder.decode(T.self, from: data)
+                        return Just(decoded)
+                            .setFailureType(to: Error.self)
+                            .eraseToAnyPublisher()
+                    } catch {
+                        let rawBody = String(data: data, encoding: .utf8) ?? "<non-utf8>"
+                        let elapsedMs = Int(Date().timeIntervalSince(startedAt) * 1000)
+                        Self.logger.error("[\(requestLabel, privacy: .public)] decode FAILED in \(elapsedMs)ms — raw body: \(rawBody, privacy: .public) — error: \(String(describing: error), privacy: .public)")
+                        return Fail(error: error).eraseToAnyPublisher()
+                    }
+                }
                 .handleEvents(receiveCompletion: { completion in
                     let elapsedMs = Int(Date().timeIntervalSince(startedAt) * 1000)
                     switch completion {
                     case .finished:
                         Self.logger.debug("[\(requestLabel, privacy: .public)] success in \(elapsedMs)ms")
                     case .failure(let error):
+                        if case SupabaseClientError.serverError = error { break }
                         Self.logger.error("[\(requestLabel, privacy: .public)] failure in \(elapsedMs)ms: \(String(describing: error), privacy: .public)")
                     }
                 })

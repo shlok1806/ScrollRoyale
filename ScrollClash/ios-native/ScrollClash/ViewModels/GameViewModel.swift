@@ -149,7 +149,8 @@ final class GameViewModel: ObservableObject {
         syncService.scorePublisher
             .receive(on: DispatchQueue.main)
             .sink { [weak self] snapshot in
-                Self.logger.debug("scorePublisher — own score: \(snapshot.score, privacy: .public)")
+                let prev = self?.localScore ?? 0
+                Self.logger.info("[GameViewModel] OWN score \(prev, privacy: .public) → \(snapshot.score, privacy: .public)")
                 self?.localScore = snapshot.score
             }
             .store(in: &cancellables)
@@ -157,7 +158,8 @@ final class GameViewModel: ObservableObject {
         syncService.opponentScorePublisher
             .receive(on: DispatchQueue.main)
             .sink { [weak self] snapshot in
-                Self.logger.debug("opponentScorePublisher — opponent score: \(snapshot.score, privacy: .public)")
+                let prev = self?.opponentScore ?? 0
+                Self.logger.info("[GameViewModel] OPPONENT score \(prev, privacy: .public) → \(snapshot.score, privacy: .public)")
                 self?.opponentScore = snapshot.score
             }
             .store(in: &cancellables)

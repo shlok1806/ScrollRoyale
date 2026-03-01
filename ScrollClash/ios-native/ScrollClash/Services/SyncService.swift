@@ -200,11 +200,11 @@ final class SupabaseSyncService: SyncServiceProtocol {
         let ownPublisher = fetchLatestScore(matchId: matchId, userId: userId)
             .handleEvents(receiveOutput: { [weak self] snapshot in
                 self?.cacheStore.setScore(snapshot)
-                Self.logger.debug("score poll — own: \(snapshot.score, privacy: .public)")
+                Self.logger.info("[score poll] OWN score=\(snapshot.score, privacy: .public) snapshotAt=\(snapshot.snapshotAt, privacy: .public)")
             }, receiveCompletion: { [weak self] completion in
                 self?.scoreRequestInFlight = false
                 if case .failure(let e) = completion {
-                    Self.logger.error("score poll FAILED (own) — \(e.localizedDescription, privacy: .public)")
+                    Self.logger.error("[score poll] FAILED (own) — \(e.localizedDescription, privacy: .public)")
                 }
             })
             .replaceError(with: cacheStore.score(matchId: matchId, userId: userId)
@@ -221,11 +221,11 @@ final class SupabaseSyncService: SyncServiceProtocol {
             opponentRequestInFlight = true
             let oppPublisher = fetchLatestScore(matchId: matchId, userId: opponentId)
                 .handleEvents(receiveOutput: { snapshot in
-                    Self.logger.debug("score poll — opponent: \(snapshot.score, privacy: .public)")
+                    Self.logger.info("[score poll] OPPONENT score=\(snapshot.score, privacy: .public) snapshotAt=\(snapshot.snapshotAt, privacy: .public)")
                 }, receiveCompletion: { [weak self] completion in
                     self?.opponentRequestInFlight = false
                     if case .failure(let e) = completion {
-                        Self.logger.error("score poll FAILED (opponent) — \(e.localizedDescription, privacy: .public)")
+                        Self.logger.error("[score poll] FAILED (opponent) — \(e.localizedDescription, privacy: .public)")
                     }
                 })
                 .replaceError(with: ScoreSnapshot(matchId: matchId, userId: opponentId, score: 0, metrics: [:], snapshotAt: Date()))
@@ -320,7 +320,9 @@ final class SupabaseSyncService: SyncServiceProtocol {
     private func fetchLatestScore(matchId: String, userId: String) -> AnyPublisher<ScoreSnapshot, Error> {
         authService.ensureAuthenticated(client: client)
             .flatMap { [client] _ in
-                client.rpc(
+                // latest_score_snapshot returns SETOF (an array) from PostgREST;
+                // use rpcFirstRow to unwrap the first element automatically.
+                client.rpcFirstRow(
                     function: "latest_score_snapshot",
                     body: ["p_match_id": matchId, "p_user_id": userId],
                     decodeAs: SupabaseScoreSnapshotDTO.self,
@@ -328,7 +330,11 @@ final class SupabaseSyncService: SyncServiceProtocol {
                     requestLabel: "latest_score_snapshot"
                 )
             }
-            .map { $0.toModel(matchId: matchId, userId: userId) }
+            .map { dto -> ScoreSnapshot in
+                let snap = dto.toModel(matchId: matchId, userId: userId)
+                Self.logger.info("[score] decoded score=\(snap.score, privacy: .public) for userId=\(userId, privacy: .public) matchId=\(matchId, privacy: .public)")
+                return snap
+            }
             .eraseToAnyPublisher()
     }
 }
