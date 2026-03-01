@@ -1,6 +1,6 @@
 # HackIllinois: Scroll Royale
 
-[![Alt text for the video thumbnail]][(https://www.youtube.com/watch?v=VIDEO_ID](https://youtu.be/240xIn0RHH4))
+(https://youtu.be/240xIn0RHH4)
 
 
 `Scroll Royale` is a 1v1 competitive doomscrolling game prototype built primarily as a native iOS app with a Supabase backend.
