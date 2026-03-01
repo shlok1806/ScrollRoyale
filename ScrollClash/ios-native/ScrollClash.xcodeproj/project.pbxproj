@@ -1,0 +1,523 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		110001 /* ScrollClashApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210001 /* ScrollClashApp.swift */; };
+		110002 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210002 /* AppState.swift */; };
+		110003 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210003 /* RootView.swift */; };
+		110004 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210004 /* MainTabView.swift */; };
+		110005 /* NeonTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210005 /* NeonTheme.swift */; };
+		110006 /* BrainCharacterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210006 /* BrainCharacterView.swift */; };
+		110007 /* ProgressRingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210007 /* ProgressRingView.swift */; };
+		110008 /* GameIcons.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210008 /* GameIcons.swift */; };
+		110009 /* AnimatedNumberView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210009 /* AnimatedNumberView.swift */; };
+		110010 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210010 /* Models.swift */; };
+		110011 /* MockData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210011 /* MockData.swift */; };
+		110012 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210012 /* LoginView.swift */; };
+		110013 /* LoadingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210013 /* LoadingView.swift */; };
+		110014 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210014 /* HomeView.swift */; };
+		110015 /* LeaderboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210015 /* LeaderboardView.swift */; };
+		110016 /* GraveyardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210016 /* GraveyardView.swift */; };
+		110017 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210017 /* ProfileView.swift */; };
+		110018 /* PreDuelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210018 /* PreDuelView.swift */; };
+		110019 /* DuelArenaView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210019 /* DuelArenaView.swift */; };
+		110020 /* DuelResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210020 /* DuelResultView.swift */; };
+		110021 /* BrainLabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210021 /* BrainLabView.swift */; };
+		110022 /* BoostInventoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210022 /* BoostInventoryView.swift */; };
+		110023 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 210023 /* Assets.xcassets */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		210001 /* ScrollClashApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScrollClashApp.swift; sourceTree = "<group>"; };
+		210002 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		210003 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		210004 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
+		210005 /* NeonTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NeonTheme.swift; sourceTree = "<group>"; };
+		210006 /* BrainCharacterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrainCharacterView.swift; sourceTree = "<group>"; };
+		210007 /* ProgressRingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressRingView.swift; sourceTree = "<group>"; };
+		210008 /* GameIcons.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameIcons.swift; sourceTree = "<group>"; };
+		210009 /* AnimatedNumberView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnimatedNumberView.swift; sourceTree = "<group>"; };
+		210010 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		210011 /* MockData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockData.swift; sourceTree = "<group>"; };
+		210012 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
+		210013 /* LoadingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadingView.swift; sourceTree = "<group>"; };
+		210014 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
+		210015 /* LeaderboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeaderboardView.swift; sourceTree = "<group>"; };
+		210016 /* GraveyardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GraveyardView.swift; sourceTree = "<group>"; };
+		210017 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
+		210018 /* PreDuelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreDuelView.swift; sourceTree = "<group>"; };
+		210019 /* DuelArenaView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DuelArenaView.swift; sourceTree = "<group>"; };
+		210020 /* DuelResultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DuelResultView.swift; sourceTree = "<group>"; };
+		210021 /* BrainLabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrainLabView.swift; sourceTree = "<group>"; };
+		210022 /* BoostInventoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoostInventoryView.swift; sourceTree = "<group>"; };
+		210023 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		310001 /* ScrollClash.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ScrollClash.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		500001 = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = ();
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		600001 = {
+			isa = PBXGroup;
+			children = (
+				610001 /* ScrollClash */,
+				620001 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		610001 /* ScrollClash */ = {
+			isa = PBXGroup;
+			children = (
+				611001 /* App */,
+				612001 /* Shared */,
+				613001 /* Models */,
+				614001 /* Features */,
+				210023 /* Assets.xcassets */,
+			);
+			path = ScrollClash;
+			sourceTree = "<group>";
+		};
+		611001 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				210001 /* ScrollClashApp.swift */,
+				210002 /* AppState.swift */,
+				210003 /* RootView.swift */,
+				210004 /* MainTabView.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		612001 /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				612002 /* Theme */,
+				612003 /* Components */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		612002 /* Theme */ = {
+			isa = PBXGroup;
+			children = (
+				210005 /* NeonTheme.swift */,
+			);
+			path = Theme;
+			sourceTree = "<group>";
+		};
+		612003 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				210006 /* BrainCharacterView.swift */,
+				210007 /* ProgressRingView.swift */,
+				210008 /* GameIcons.swift */,
+				210009 /* AnimatedNumberView.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		613001 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				210010 /* Models.swift */,
+				210011 /* MockData.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		614001 /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				614002 /* Auth */,
+				614003 /* Home */,
+				614004 /* Leaderboard */,
+				614005 /* Graveyard */,
+				614006 /* Profile */,
+				614007 /* Duel */,
+				614008 /* BrainLab */,
+				614009 /* Boosts */,
+			);
+			path = Features;
+			sourceTree = "<group>";
+		};
+		614002 /* Auth */ = {
+			isa = PBXGroup;
+			children = (
+				210012 /* LoginView.swift */,
+				210013 /* LoadingView.swift */,
+			);
+			path = Auth/Views;
+			sourceTree = "<group>";
+		};
+		614003 /* Home */ = {
+			isa = PBXGroup;
+			children = (
+				210014 /* HomeView.swift */,
+			);
+			path = Home/Views;
+			sourceTree = "<group>";
+		};
+		614004 /* Leaderboard */ = {
+			isa = PBXGroup;
+			children = (
+				210015 /* LeaderboardView.swift */,
+			);
+			path = Leaderboard/Views;
+			sourceTree = "<group>";
+		};
+		614005 /* Graveyard */ = {
+			isa = PBXGroup;
+			children = (
+				210016 /* GraveyardView.swift */,
+			);
+			path = Graveyard/Views;
+			sourceTree = "<group>";
+		};
+		614006 /* Profile */ = {
+			isa = PBXGroup;
+			children = (
+				210017 /* ProfileView.swift */,
+			);
+			path = Profile/Views;
+			sourceTree = "<group>";
+		};
+		614007 /* Duel */ = {
+			isa = PBXGroup;
+			children = (
+				210018 /* PreDuelView.swift */,
+				210019 /* DuelArenaView.swift */,
+				210020 /* DuelResultView.swift */,
+			);
+			path = Duel/Views;
+			sourceTree = "<group>";
+		};
+		614008 /* BrainLab */ = {
+			isa = PBXGroup;
+			children = (
+				210021 /* BrainLabView.swift */,
+			);
+			path = BrainLab/Views;
+			sourceTree = "<group>";
+		};
+		614009 /* Boosts */ = {
+			isa = PBXGroup;
+			children = (
+				210022 /* BoostInventoryView.swift */,
+			);
+			path = Boosts/Views;
+			sourceTree = "<group>";
+		};
+		620001 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				310001 /* ScrollClash.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		700001 /* ScrollClash */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 800001 /* Build configuration list for PBXNativeTarget "ScrollClash" */;
+			buildPhases = (
+				400001 /* Sources */,
+				500001 /* Frameworks */,
+				900001 /* Resources */,
+			);
+			buildRules = ();
+			dependencies = ();
+			name = ScrollClash;
+			productName = ScrollClash;
+			productReference = 310001 /* ScrollClash.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A00001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					700001 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+				};
+			};
+			buildConfigurationList = 800002 /* Build configuration list for PBXProject "ScrollClash" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 600001;
+			productRefGroup = 620001 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				700001 /* ScrollClash */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		900001 = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				110023 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		400001 = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				110001 /* ScrollClashApp.swift in Sources */,
+				110002 /* AppState.swift in Sources */,
+				110003 /* RootView.swift in Sources */,
+				110004 /* MainTabView.swift in Sources */,
+				110005 /* NeonTheme.swift in Sources */,
+				110006 /* BrainCharacterView.swift in Sources */,
+				110007 /* ProgressRingView.swift in Sources */,
+				110008 /* GameIcons.swift in Sources */,
+				110009 /* AnimatedNumberView.swift in Sources */,
+				110010 /* Models.swift in Sources */,
+				110011 /* MockData.swift in Sources */,
+				110012 /* LoginView.swift in Sources */,
+				110013 /* LoadingView.swift in Sources */,
+				110014 /* HomeView.swift in Sources */,
+				110015 /* LeaderboardView.swift in Sources */,
+				110016 /* GraveyardView.swift in Sources */,
+				110017 /* ProfileView.swift in Sources */,
+				110018 /* PreDuelView.swift in Sources */,
+				110019 /* DuelArenaView.swift in Sources */,
+				110020 /* DuelResultView.swift in Sources */,
+				110021 /* BrainLabView.swift in Sources */,
+				110022 /* BoostInventoryView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		810001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_CYCLE = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		810002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_CYCLE = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		820001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_SUPABASE_ANON_KEY = REPLACE_WITH_SUPABASE_ANON_KEY;
+				INFOPLIST_KEY_SUPABASE_URL = REPLACE_WITH_SUPABASE_URL;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.scrollclash.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		820002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_SUPABASE_ANON_KEY = REPLACE_WITH_SUPABASE_ANON_KEY;
+				INFOPLIST_KEY_SUPABASE_URL = REPLACE_WITH_SUPABASE_URL;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.scrollclash.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		800001 /* Build configuration list for PBXNativeTarget "ScrollClash" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				820001 /* Debug */,
+				820002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		800002 /* Build configuration list for PBXProject "ScrollClash" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				810001 /* Debug */,
+				810002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = A00001 /* Project object */;
+}

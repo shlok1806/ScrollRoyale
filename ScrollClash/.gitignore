@@ -1,0 +1,20 @@
+# macOS / Xcode
+.DS_Store
+xcuserdata/
+*.xcuserstate
+*.xccheckout
+*.moved-aside
+
+# Build artifacts
+DerivedData/
+ios-native/DerivedData/
+build/
+
+# Node / web
+node_modules/
+dist/
+
+# Local environment / secrets
+.env
+.env.*
+*.local
