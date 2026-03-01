@@ -106,8 +106,11 @@ final class SupabaseSyncService: SyncServiceProtocol {
     private let opponentScoreSubject = PassthroughSubject<ScoreSnapshot, Never>()
 
     private var scorePoller: AnyCancellable?
-    /// Stores in-flight telemetry/sendGameState subscriptions so they are not immediately cancelled.
+    /// Stores long-lived subscriptions that must complete fully (e.g. auth warm-up).
     private var sendCancellables = Set<AnyCancellable>()
+    /// Single slot for game-state telemetry sends — assigning a new value cancels the previous
+    /// in-flight request, preventing unbounded growth (scroll events are best-effort).
+    private var lastSendCancellable: AnyCancellable?
 
     private var currentMatchId: String?
     private var currentUserId: String?
@@ -163,7 +166,7 @@ final class SupabaseSyncService: SyncServiceProtocol {
             scoreSubject.send(cachedSnapshot)
         }
 
-        // Adaptive polling — burst on connect (0.4 s), settle to 1 s after 5 s.
+        // Adaptive polling — burst on connect (0.4 s), settle to 0.5 s after 5 s.
         scorePoller = Timer.publish(every: 0.35, on: .main, in: .common)
             .autoconnect()
             .flatMap { [weak self] _ -> AnyPublisher<Void, Never> in
@@ -176,7 +179,7 @@ final class SupabaseSyncService: SyncServiceProtocol {
                 }
                 let now = Date()
                 let elapsed = now.timeIntervalSince(self.connectedAt ?? now)
-                let requiredInterval: TimeInterval = elapsed < 5 ? 0.4 : 1.0
+                let requiredInterval: TimeInterval = elapsed < 5 ? 0.4 : 0.5
                 guard now.timeIntervalSince(self.lastScorePollAt) >= requiredInterval else {
                     return Empty().eraseToAnyPublisher()
                 }
@@ -196,8 +199,9 @@ final class SupabaseSyncService: SyncServiceProtocol {
 
         var publishers: [AnyPublisher<Void, Never>] = []
 
-        // Own score
+        // Own score — receive on main before handleEvents so flag resets happen on main.
         let ownPublisher = fetchLatestScore(matchId: matchId, userId: userId)
+            .receive(on: DispatchQueue.main)
             .handleEvents(receiveOutput: { [weak self] snapshot in
                 self?.cacheStore.setScore(snapshot)
                 Self.logger.info("[score poll] OWN score=\(snapshot.score, privacy: .public) snapshotAt=\(snapshot.snapshotAt, privacy: .public)")
@@ -219,7 +223,9 @@ final class SupabaseSyncService: SyncServiceProtocol {
         // Opponent score — only if we know their userId and not already in flight
         if let opponentId = currentOpponentUserId, !opponentId.isEmpty, !opponentRequestInFlight {
             opponentRequestInFlight = true
+            // Receive on main before handleEvents so flag reset is thread-safe.
             let oppPublisher = fetchLatestScore(matchId: matchId, userId: opponentId)
+                .receive(on: DispatchQueue.main)
                 .handleEvents(receiveOutput: { snapshot in
                     Self.logger.info("[score poll] OPPONENT score=\(snapshot.score, privacy: .public) snapshotAt=\(snapshot.snapshotAt, privacy: .public)")
                 }, receiveCompletion: { [weak self] completion in
@@ -271,8 +277,10 @@ final class SupabaseSyncService: SyncServiceProtocol {
                 "velocity": state.scrollVelocity
             ]
         )
-        // Store the cancellable so the network request is not immediately cancelled.
-        sendTelemetry(events: [event], matchId: matchId)
+        // Replace the previous slot — scroll telemetry is best-effort, so superseding
+        // an in-flight request with the latest state is acceptable and prevents unbounded
+        // Set growth (up to 900+ entries over a 90-second match at 10 Hz send rate).
+        lastSendCancellable = sendTelemetry(events: [event], matchId: matchId)
             .sink(
                 receiveCompletion: { completion in
                     if case .failure(let e) = completion {
@@ -281,7 +289,6 @@ final class SupabaseSyncService: SyncServiceProtocol {
                 },
                 receiveValue: { _ in }
             )
-            .store(in: &sendCancellables)
     }
 
     func sendTelemetry(events: [TelemetryEvent], matchId: String) -> AnyPublisher<Void, Error> {
@@ -308,6 +315,7 @@ final class SupabaseSyncService: SyncServiceProtocol {
         Self.logger.info("disconnect — matchId: \(self.currentMatchId ?? "nil", privacy: .public)")
         scorePoller?.cancel()
         scorePoller = nil
+        lastSendCancellable = nil
         sendCancellables.removeAll()
         currentMatchId = nil
         currentUserId = nil

@@ -182,11 +182,15 @@ final class GameViewModel: ObservableObject {
     }
 
     private func applyRemoteState(_ state: GameState) {
-        // Track the opponent's current video index for HUD display.
-        opponentVideoIndex = state.currentVideoIndex
-        Self.logger.info("[GameViewModel] applyRemoteState — opponentVideoIndex=\(state.currentVideoIndex, privacy: .public)")
+        // Only update opponentVideoIndex from pure game-state events (no scores embedded).
+        // Synthetic states published by the score poller always carry scores AND
+        // hardcode currentVideoIndex = 0, which would constantly reset the HUD counter.
+        if state.player1Score == nil && state.player2Score == nil {
+            opponentVideoIndex = state.currentVideoIndex
+            Self.logger.info("[GameViewModel] opponentVideoIndex → \(state.currentVideoIndex, privacy: .public)")
+        }
 
-        // If the game state carries both scores, apply opponent's score directly.
+        // Apply opponent score when game state carries score data.
         if let p2 = state.player2Score {
             let isP1 = match.player1Id == currentUserId
             opponentScore = isP1 ? p2 : (state.player1Score ?? opponentScore)
