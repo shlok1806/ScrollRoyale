@@ -11,13 +11,8 @@ declare
   v_exists boolean;
 begin
   loop
-    -- 6-char uppercase alphanumeric code.
-    v_code := upper(substring(encode(gen_random_bytes(6), 'base64') from '[A-Za-z0-9]{6}'));
-    v_code := regexp_replace(v_code, '[^A-Z0-9]', '', 'g');
-    if char_length(v_code) < 6 then
-      continue;
-    end if;
-    v_code := substring(v_code from 1 for 6);
+    -- Always generate a non-null, 6-char uppercase code (hex => A-F0-9).
+    v_code := upper(substring(encode(extensions.gen_random_bytes(8), 'hex') from 1 for 6));
     select exists(select 1 from public.matches where match_code = v_code) into v_exists;
     exit when not v_exists;
   end loop;
@@ -67,6 +62,8 @@ as $$
 declare
   v_match public.matches;
 begin
+  perform public.ensure_user_profile(null);
+
   if p_duration_sec not in (90, 180, 300) then
     raise exception 'invalid duration_sec: %', p_duration_sec;
   end if;
@@ -82,8 +79,8 @@ begin
     end if;
   end if;
 
-  insert into public.matches (duration_sec, reel_set_id, created_by, idempotency_key)
-  values (p_duration_sec, p_reel_set_id, auth.uid(), p_idempotency_key)
+  insert into public.matches (duration_sec, reel_set_id, created_by, idempotency_key, match_code)
+  values (p_duration_sec, p_reel_set_id, auth.uid(), p_idempotency_key, public.generate_match_code())
   returning * into v_match;
 
   insert into public.match_players (match_id, user_id, slot, ready_state)
@@ -106,6 +103,8 @@ as $$
 declare
   v_match public.matches;
 begin
+  perform public.ensure_user_profile(null);
+
   if p_duration_sec not in (90, 180, 300) then
     raise exception 'invalid duration_sec: %', p_duration_sec;
   end if;
@@ -143,6 +142,8 @@ declare
   v_match public.matches;
   v_player_count integer;
 begin
+  perform public.ensure_user_profile(null);
+
   select * into v_match
   from public.matches
   where id = p_match_id
@@ -179,6 +180,8 @@ declare
   v_match public.matches;
   v_player_count integer;
 begin
+  perform public.ensure_user_profile(null);
+
   select * into v_match
   from public.matches
   where match_code = upper(p_match_code)

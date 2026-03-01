@@ -123,7 +123,18 @@ final class SupabaseMatchmakingService: MatchmakingServiceProtocol {
                     decodeAs: SupabaseMatchDTO.self
                 )
             }
-            .map { $0.toAppModel }
+            .tryMap { dto in
+                let match = dto.toAppModel
+                guard
+                    let code = match.matchCode?.trimmingCharacters(in: .whitespacesAndNewlines),
+                    code.count == 6
+                else {
+                    throw SupabaseClientError.serverError(
+                        "Create match succeeded but no valid match code was returned. Run latest SQL migrations (001/003) in Supabase."
+                    )
+                }
+                return match
+            }
             .eraseToAnyPublisher()
     }
 

@@ -9,6 +9,23 @@ enum SupabaseClientError: Error {
     case decodingError
 }
 
+extension SupabaseClientError: LocalizedError {
+    var errorDescription: String? {
+        switch self {
+        case .invalidURL:
+            return "Supabase URL is invalid. Check SUPABASE_URL in Info.plist."
+        case .missingConfiguration:
+            return "Supabase configuration is missing. Add SUPABASE_URL and SUPABASE_ANON_KEY."
+        case .invalidResponse:
+            return "Received an invalid response from Supabase."
+        case .serverError(let message):
+            return message
+        case .decodingError:
+            return "Failed to decode Supabase response."
+        }
+    }
+}
+
 struct SupabaseConfiguration {
     let url: URL
     let anonKey: String

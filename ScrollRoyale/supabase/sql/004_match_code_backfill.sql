@@ -3,7 +3,7 @@ alter table public.matches
   add column if not exists match_code text;
 
 update public.matches
-set match_code = upper(substring(encode(gen_random_bytes(6), 'base64') from '[A-Za-z0-9]{6}'))
+set match_code = upper(substring(encode(extensions.gen_random_bytes(8), 'hex') from 1 for 6))
 where match_code is null;
 
 alter table public.matches

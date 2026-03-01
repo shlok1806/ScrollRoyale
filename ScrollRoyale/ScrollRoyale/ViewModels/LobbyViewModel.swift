@@ -175,8 +175,19 @@ final class LobbyViewModel: ObservableObject {
         if raw.contains("match full") {
             return "That match is already full."
         }
-        if raw.contains("invalid") || raw.contains("unavailable") || raw.contains("code") {
+        if raw.contains("invalid or unavailable match code")
+            || (raw.contains("match code") && raw.contains("invalid"))
+            || (raw.contains("match code") && raw.contains("unavailable"))
+        {
             return "Match code is invalid, expired, or unavailable."
+        }
+        if raw.contains("create match succeeded but no valid match code was returned") {
+            return "Supabase schema is out of date. Apply the latest SQL files, then try again."
+        }
+        if raw.contains("pgrst202")
+            || raw.contains("could not find the function public.create_match_with_code")
+        {
+            return "Supabase is missing the latest matchmaking RPCs. Run supabase/sql/003_functions.sql in the Supabase SQL Editor, then retry."
         }
         return error.localizedDescription
     }
