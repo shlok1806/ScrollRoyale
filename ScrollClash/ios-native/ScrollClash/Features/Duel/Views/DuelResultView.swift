@@ -3,9 +3,14 @@ import SwiftUI
 struct DuelResultView: View {
     @EnvironmentObject private var appState: AppState
     let opponent: DuelOpponent
+    let isVictory: Bool
     let onDismiss: () -> Void
 
-    private let isVictory: Bool = Bool.random()
+    // Entrance animation state
+    @State private var headerScale: CGFloat = 1.8
+    @State private var headerOpacity: Double = 0
+    @State private var contentVisible = false
+    @State private var crackProgress: CGFloat = 0
 
     @State private var showConfetti = false
     @State private var animateNumbers = false
@@ -55,7 +60,7 @@ struct DuelResultView: View {
                 ConfettiView()
             }
 
-            // Defeat cracks
+            // Defeat cracks — animated draw-in via crackProgress
             if !isVictory {
                 Canvas { context, size in
                     let lines = [
@@ -67,59 +72,94 @@ struct DuelResultView: View {
                         var p = Path()
                         p.move(to: from)
                         p.addLine(to: to)
-                        context.stroke(p, with: .color(NeonTheme.pink.opacity(0.3)), lineWidth: 2)
+                        context.stroke(
+                            p.trimmedPath(from: 0, to: crackProgress),
+                            with: .color(NeonTheme.pink.opacity(0.3)),
+                            lineWidth: 2
+                        )
                     }
                 }
                 .ignoresSafeArea()
+                .animation(.easeIn(duration: 0.6), value: crackProgress)
             }
 
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 20) {
                     Color.clear.frame(height: 48)
 
-                    // VICTORY / DEFEAT header
+                    // VICTORY / DEFEAT header (spring entrance handled via state)
                     resultHeader
 
-                    // VS section
-                    vsSection
-                        .padding(.horizontal, 20)
+                    // Content sections — staggered fade + slide in
+                    Group {
+                        // VS section
+                        vsSection
+                            .padding(.horizontal, 20)
 
-                    // HP towers
-                    hpTowers
-                        .padding(.horizontal, 20)
+                        // HP towers
+                        hpTowers
+                            .padding(.horizontal, 20)
 
-                    // Match stats
-                    matchStats
-                        .padding(.horizontal, 20)
+                        // Match stats
+                        matchStats
+                            .padding(.horizontal, 20)
 
-                    // Timeline
-                    battleTimeline
-                        .padding(.horizontal, 20)
+                        // Timeline
+                        battleTimeline
+                            .padding(.horizontal, 20)
 
-                    // Rewards
-                    rewardsSection
-                        .padding(.horizontal, 20)
+                        // Rewards
+                        rewardsSection
+                            .padding(.horizontal, 20)
 
-                    // MVP boost
-                    mvpBoostCard
-                        .padding(.horizontal, 20)
+                        // MVP boost
+                        mvpBoostCard
+                            .padding(.horizontal, 20)
 
-                    // Action buttons
-                    actionButtons
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 40)
+                        // Action buttons
+                        actionButtons
+                            .padding(.horizontal, 20)
+                            .padding(.bottom, 40)
+                    }
+                    .opacity(contentVisible ? 1 : 0)
+                    .offset(y: contentVisible ? 0 : 24)
                 }
             }
         }
         .onAppear {
-            if isVictory {
-                showConfetti = true
-                DispatchQueue.main.asyncAfter(deadline: .now() + 3) { showConfetti = false }
+            // 1. Header springs in immediately
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
+                headerScale = 1.0
+                headerOpacity = 1.0
             }
+
+            // 2. Content sections fade + slide in at +0.35 s
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                withAnimation(.easeOut(duration: 0.5)) {
+                    contentVisible = true
+                }
+            }
+
+            // 3. Numbers count up at +0.5 s
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 withAnimation(.easeOut(duration: 1.2)) {
                     animateNumbers = true
                     xpProgress = 0.78
+                }
+            }
+
+            // 4. Confetti for victory (fires right away)
+            if isVictory {
+                showConfetti = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3) { showConfetti = false }
+            }
+
+            // 5. Crack lines draw in for defeat at +0.1 s
+            if !isVictory {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    withAnimation(.easeIn(duration: 0.6)) {
+                        crackProgress = 1.0
+                    }
                 }
             }
         }
@@ -141,6 +181,9 @@ struct DuelResultView: View {
                 .shadow(color: (isVictory ? NeonTheme.green : NeonTheme.pink).opacity(0.9), radius: 20)
                 .shadow(color: .black.opacity(0.5), radius: 0, x: 3, y: 3)
         }
+        // Spring entrance: pop in from large → normal
+        .scaleEffect(headerScale)
+        .opacity(headerOpacity)
     }
 
     // MARK: VS Section

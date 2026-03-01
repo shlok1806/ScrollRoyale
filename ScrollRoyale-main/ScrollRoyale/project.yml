@@ -1,0 +1,26 @@
+name: ScrollRoyale
+options:
+  bundleIdPrefix: com.scrollroyale
+  deploymentTarget:
+    iOS: "16.0"
+  xcodeVersion: "15.0"
+  generateEmptyDirectories: true
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    DEVELOPMENT_TEAM: ""
+targets:
+  ScrollRoyale:
+    type: application
+    platform: iOS
+    sources:
+      - path: ScrollRoyale
+        excludes: ["**/Resources/**"]
+    resources:
+      - path: ScrollRoyale/Resources
+    settings:
+      base:
+        INFOPLIST_FILE: ScrollRoyale/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.scrollroyale.app
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SUPPORTED_PLATFORMS: "iphoneos iphonesimulator"

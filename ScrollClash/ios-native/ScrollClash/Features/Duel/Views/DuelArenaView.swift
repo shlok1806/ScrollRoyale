@@ -23,6 +23,7 @@ struct DuelArenaView: View {
     @State private var reactionActive = false
     @State private var damagePopups: [(id: UUID, damage: Int, isYou: Bool)] = []
     @State private var showResult = false
+    @State private var isVictory = false
 
     // VideoFeedView bindings
     @State private var scrollOffset: Double = 0
@@ -190,7 +191,7 @@ struct DuelArenaView: View {
 
                 // Result overlay
                 if showResult {
-                    DuelResultView(opponent: opponent, onDismiss: { showResult = false; onDismiss() })
+                    DuelResultView(opponent: opponent, isVictory: isVictory, onDismiss: { showResult = false; onDismiss() })
                         .transition(.move(edge: .bottom))
                         .zIndex(10)
                 }
@@ -234,7 +235,10 @@ struct DuelArenaView: View {
 
                 Spacer()
 
-                Button(action: { withAnimation(.easeInOut(duration: 0.3)) { showResult = true } }) {
+                Button(action: {
+                    isVictory = Bool.random()
+                    withAnimation(.easeInOut(duration: 0.3)) { showResult = true }
+                }) {
                     Text("FORFEIT")
                         .font(.system(size: 11, weight: .black))
                         .foregroundColor(.white)
@@ -396,53 +400,78 @@ struct DuelArenaView: View {
         .shadow(color: .black.opacity(0.8), radius: 0, x: 0, y: 3)
     }
 
-    // MARK: Reaction Button
+    // MARK: Right Sidebar Actions (TikTok style — icon circle + label)
 
     private var reactionButton: some View {
-        Button { } label: {
-            ZStack {
-                Circle()
-                    .fill(reactionActive ? NeonTheme.pink : Color.white.opacity(0.2))
-                    .frame(width: 52, height: 52)
-                    .overlay(Circle().stroke(Color.black, lineWidth: 4))
-                    .shadow(color: reactionActive ? NeonTheme.pink.opacity(0.8) : .clear, radius: 12)
-                    .shadow(color: .black.opacity(0.8), radius: 0, x: 0, y: 4)
-                Image(systemName: "hand.thumbsup.fill")
-                    .font(.system(size: 22, weight: .bold))
-                    .foregroundColor(.white)
-            }
+        sidebarAction(
+            label: "REACT",
+            color: reactionActive ? NeonTheme.pink : Color.white.opacity(0.18),
+            glow: reactionActive ? NeonTheme.pink.opacity(0.7) : .clear
+        ) {
+            Image(systemName: "hand.thumbsup.fill")
+                .font(.system(size: 24, weight: .bold))
+                .foregroundColor(.white)
         }
-        .buttonStyle(.plain)
         .disabled(!reactionActive)
+        .onTapGesture { }
     }
 
     private var quizIndicator: some View {
-        ZStack {
-            Circle()
-                .fill(NeonTheme.yellow.opacity(0.8))
-                .frame(width: 52, height: 52)
-                .overlay(Circle().stroke(Color.black, lineWidth: 4))
-                .shadow(color: .black.opacity(0.8), radius: 0, x: 0, y: 4)
-            Image(systemName: "questionmark.circle.fill")
-                .font(.system(size: 22, weight: .bold))
+        sidebarAction(
+            label: "QUIZ",
+            color: NeonTheme.yellow,
+            glow: NeonTheme.yellow.opacity(0.5)
+        ) {
+            Image(systemName: "questionmark")
+                .font(.system(size: 24, weight: .black))
                 .foregroundColor(.black)
         }
     }
 
     private var discoveryProgress: some View {
         VStack(spacing: 4) {
+            // Three pip dots — mini discovery progress
             ForEach(0..<3, id: \.self) { i in
                 Circle()
-                    .fill(i < 2 ? NeonTheme.green : Color.white.opacity(0.2))
-                    .frame(width: 8, height: 8)
-                    .overlay(Circle().stroke(Color.black, lineWidth: 1))
+                    .fill(i < 2 ? NeonTheme.green : Color.white.opacity(0.25))
+                    .frame(width: 9, height: 9)
+                    .shadow(color: i < 2 ? NeonTheme.green.opacity(0.7) : .clear, radius: 4)
+                    .overlay(Circle().stroke(Color.black, lineWidth: 1.5))
             }
+            Text("DISC")
+                .font(.system(size: 9, weight: .black))
+                .foregroundColor(.white.opacity(0.7))
         }
-        .padding(8)
-        .background(Color.black.opacity(0.6))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.black, lineWidth: 3))
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .background(Color.black.opacity(0.55))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.black, lineWidth: 3))
         .shadow(color: .black.opacity(0.8), radius: 0, x: 0, y: 3)
+    }
+
+    @ViewBuilder
+    private func sidebarAction<Icon: View>(
+        label: String,
+        color: Color,
+        glow: Color,
+        @ViewBuilder icon: () -> Icon
+    ) -> some View {
+        VStack(spacing: 5) {
+            ZStack {
+                Circle()
+                    .fill(color)
+                    .frame(width: 56, height: 56)
+                    .overlay(Circle().stroke(Color.black, lineWidth: 3))
+                    .shadow(color: glow, radius: 10)
+                    .shadow(color: .black.opacity(0.7), radius: 0, x: 0, y: 4)
+                icon()
+            }
+            Text(label)
+                .font(.system(size: 9, weight: .black))
+                .foregroundColor(.white.opacity(0.85))
+                .shadow(color: .black.opacity(0.6), radius: 0, x: 1, y: 1)
+        }
     }
 
     // MARK: Banked Damage
@@ -513,6 +542,7 @@ struct DuelArenaView: View {
             timeLeft = max(0, timeLeft - 1)
         }
         try? await Task.sleep(for: .milliseconds(500))
+        isVictory = Bool.random()
         showResult = true
     }
 
