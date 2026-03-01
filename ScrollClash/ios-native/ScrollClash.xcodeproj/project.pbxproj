@@ -106,10 +106,11 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		500001 = {
+		500001 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
-			files = ();
+			files = (
+			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
@@ -194,6 +195,88 @@
 			path = Models;
 			sourceTree = "<group>";
 		};
+		614001 /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				614002 /* Auth/Views */,
+				614003 /* Home/Views */,
+				614004 /* Leaderboard/Views */,
+				614005 /* Graveyard/Views */,
+				614006 /* Profile/Views */,
+				614007 /* Duel/Views */,
+				614008 /* BrainLab/Views */,
+				614009 /* Boosts/Views */,
+			);
+			path = Features;
+			sourceTree = "<group>";
+		};
+		614002 /* Auth/Views */ = {
+			isa = PBXGroup;
+			children = (
+				210012 /* LoginView.swift */,
+				210013 /* LoadingView.swift */,
+			);
+			path = Auth/Views;
+			sourceTree = "<group>";
+		};
+		614003 /* Home/Views */ = {
+			isa = PBXGroup;
+			children = (
+				210014 /* HomeView.swift */,
+			);
+			path = Home/Views;
+			sourceTree = "<group>";
+		};
+		614004 /* Leaderboard/Views */ = {
+			isa = PBXGroup;
+			children = (
+				210015 /* LeaderboardView.swift */,
+			);
+			path = Leaderboard/Views;
+			sourceTree = "<group>";
+		};
+		614005 /* Graveyard/Views */ = {
+			isa = PBXGroup;
+			children = (
+				210016 /* GraveyardView.swift */,
+			);
+			path = Graveyard/Views;
+			sourceTree = "<group>";
+		};
+		614006 /* Profile/Views */ = {
+			isa = PBXGroup;
+			children = (
+				210017 /* ProfileView.swift */,
+			);
+			path = Profile/Views;
+			sourceTree = "<group>";
+		};
+		614007 /* Duel/Views */ = {
+			isa = PBXGroup;
+			children = (
+				210018 /* PreDuelView.swift */,
+				210019 /* DuelArenaView.swift */,
+				210020 /* DuelResultView.swift */,
+			);
+			path = Duel/Views;
+			sourceTree = "<group>";
+		};
+		614008 /* BrainLab/Views */ = {
+			isa = PBXGroup;
+			children = (
+				210021 /* BrainLabView.swift */,
+			);
+			path = BrainLab/Views;
+			sourceTree = "<group>";
+		};
+		614009 /* Boosts/Views */ = {
+			isa = PBXGroup;
+			children = (
+				210022 /* BoostInventoryView.swift */,
+			);
+			path = Boosts/Views;
+			sourceTree = "<group>";
+		};
 		615001 /* Services */ = {
 			isa = PBXGroup;
 			children = (
@@ -230,88 +313,6 @@
 			path = ViewModels;
 			sourceTree = "<group>";
 		};
-		614001 /* Features */ = {
-			isa = PBXGroup;
-			children = (
-				614002 /* Auth */,
-				614003 /* Home */,
-				614004 /* Leaderboard */,
-				614005 /* Graveyard */,
-				614006 /* Profile */,
-				614007 /* Duel */,
-				614008 /* BrainLab */,
-				614009 /* Boosts */,
-			);
-			path = Features;
-			sourceTree = "<group>";
-		};
-		614002 /* Auth */ = {
-			isa = PBXGroup;
-			children = (
-				210012 /* LoginView.swift */,
-				210013 /* LoadingView.swift */,
-			);
-			path = Auth/Views;
-			sourceTree = "<group>";
-		};
-		614003 /* Home */ = {
-			isa = PBXGroup;
-			children = (
-				210014 /* HomeView.swift */,
-			);
-			path = Home/Views;
-			sourceTree = "<group>";
-		};
-		614004 /* Leaderboard */ = {
-			isa = PBXGroup;
-			children = (
-				210015 /* LeaderboardView.swift */,
-			);
-			path = Leaderboard/Views;
-			sourceTree = "<group>";
-		};
-		614005 /* Graveyard */ = {
-			isa = PBXGroup;
-			children = (
-				210016 /* GraveyardView.swift */,
-			);
-			path = Graveyard/Views;
-			sourceTree = "<group>";
-		};
-		614006 /* Profile */ = {
-			isa = PBXGroup;
-			children = (
-				210017 /* ProfileView.swift */,
-			);
-			path = Profile/Views;
-			sourceTree = "<group>";
-		};
-		614007 /* Duel */ = {
-			isa = PBXGroup;
-			children = (
-				210018 /* PreDuelView.swift */,
-				210019 /* DuelArenaView.swift */,
-				210020 /* DuelResultView.swift */,
-			);
-			path = Duel/Views;
-			sourceTree = "<group>";
-		};
-		614008 /* BrainLab */ = {
-			isa = PBXGroup;
-			children = (
-				210021 /* BrainLabView.swift */,
-			);
-			path = BrainLab/Views;
-			sourceTree = "<group>";
-		};
-		614009 /* Boosts */ = {
-			isa = PBXGroup;
-			children = (
-				210022 /* BoostInventoryView.swift */,
-			);
-			path = Boosts/Views;
-			sourceTree = "<group>";
-		};
 		620001 /* Products */ = {
 			isa = PBXGroup;
 			children = (
@@ -331,8 +332,10 @@
 				500001 /* Frameworks */,
 				900001 /* Resources */,
 			);
-			buildRules = ();
-			dependencies = ();
+			buildRules = (
+			);
+			dependencies = (
+			);
 			name = ScrollClash;
 			productName = ScrollClash;
 			productReference = 310001 /* ScrollClash.app */;
@@ -372,7 +375,7 @@
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		900001 = {
+		900001 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -383,7 +386,7 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		400001 = {
+		400001 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -562,6 +565,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "";
+				DEVELOPMENT_TEAM = 2QJM9MS6J8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ScrollClash/Info.plist;
@@ -572,7 +576,7 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.scrollclash.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlxdWlpcXdteWpueXF0cXhxdm9qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIzMTI4MTAsImV4cCI6MjA4Nzg4ODgxMH0.HRVfXW8ATF5ZlMrIkw1JVMa5Y4k3pDz9J8uUZ_c60cU";
+				SUPABASE_ANON_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlxdWlpcXdteWpueXF0cXhxdm9qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIzMTI4MTAsImV4cCI6MjA4Nzg4ODgxMH0.HRVfXW8ATF5ZlMrIkw1JVMa5Y4k3pDz9J8uUZ_c60cU;
 				SUPABASE_URL = "https://iquiiqwmyjnyqtqxqvoj.supabase.co";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -588,6 +592,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "";
+				DEVELOPMENT_TEAM = 2QJM9MS6J8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ScrollClash/Info.plist;
@@ -598,7 +603,7 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.scrollclash.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlxdWlpcXdteWpueXF0cXhxdm9qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIzMTI4MTAsImV4cCI6MjA4Nzg4ODgxMH0.HRVfXW8ATF5ZlMrIkw1JVMa5Y4k3pDz9J8uUZ_c60cU";
+				SUPABASE_ANON_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlxdWlpcXdteWpueXF0cXhxdm9qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIzMTI4MTAsImV4cCI6MjA4Nzg4ODgxMH0.HRVfXW8ATF5ZlMrIkw1JVMa5Y4k3pDz9J8uUZ_c60cU;
 				SUPABASE_URL = "https://iquiiqwmyjnyqtqxqvoj.supabase.co";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
