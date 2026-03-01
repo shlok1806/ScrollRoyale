@@ -122,9 +122,14 @@ struct PreDuelView: View {
                 Self.logger.warning("onChange: guard failed — neither isHost nor isJoiner (mode=\(String(describing: self.lobbyVM.mode), privacy: .public))")
                 return
             }
-            Self.logger.info("onChange: TRANSITIONING to .found — matchId: \(match.id, privacy: .public) duration: \(match.durationSec, privacy: .public)s")
+            // Only transition once — guard against repeated polls re-triggering
+            guard phase == .searching else { return }
+            Self.logger.info("onChange: TRANSITIONING to .found then auto-countdown — matchId: \(match.id, privacy: .public) duration: \(match.durationSec, privacy: .public)s startedAt: \(match.startedAt?.description ?? "nil", privacy: .public)")
             matchDuration = match.durationSec
-            phase = .found
+            withAnimation { phase = .found }
+            // Auto-start synchronized countdown using the server's startedAt timestamp
+            // so both devices reach GO! at the same wall-clock time.
+            autoStartCountdown(startedAt: match.startedAt)
         }
     }
 
@@ -400,32 +405,30 @@ struct PreDuelView: View {
                         .fill(NeonTheme.green)
                         .frame(width: 120, height: 120)
                         .overlay(Circle().stroke(Color.black, lineWidth: 6))
+                        .shadow(color: NeonTheme.green.opacity(0.6), radius: 20)
                         .shadow(color: .black.opacity(0.8), radius: 0, x: 0, y: 8)
-                    Text("\(countdown)")
-                        .font(.system(size: 64, weight: .black))
+                    Text(countdown > 0 ? "\(countdown)" : "GO!")
+                        .font(.system(size: countdown > 0 ? 64 : 44, weight: .black))
                         .foregroundColor(.black)
                 }
-                .scaleEffect(1.0)
-                .transition(.scale)
+                .id(countdown)
+                .transition(.asymmetric(
+                    insertion: .scale(scale: 1.4).combined(with: .opacity),
+                    removal: .scale(scale: 0.6).combined(with: .opacity)
+                ))
+                .animation(.easeInOut(duration: 0.25), value: countdown)
             } else {
-                Button {
-                    withAnimation { phase = .countdown }
-                    startCountdown()
-                } label: {
-                    Text("READY!")
-                        .font(.system(size: 22, weight: .black))
-                        .foregroundColor(.black)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 64)
-                        .background(NeonTheme.green)
-                        .clipShape(RoundedRectangle(cornerRadius: 20))
-                        .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.black, lineWidth: 4))
-                        .shadow(color: .black.opacity(0.8), radius: 0, x: 0, y: 6)
-                        .shadow(color: NeonTheme.green.opacity(0.4), radius: 12)
+                // Waiting for server-initiated countdown — show pulse indicator
+                VStack(spacing: 8) {
+                    ProgressView()
+                        .tint(NeonTheme.green)
+                        .scaleEffect(1.2)
+                    Text("STARTING MATCH...")
+                        .font(.system(size: 14, weight: .black))
+                        .foregroundColor(NeonTheme.green)
                 }
-                .buttonStyle(.plain)
                 .padding(.horizontal, 20)
-                .transition(.opacity.combined(with: .move(edge: .bottom)))
+                .transition(.opacity)
             }
         }
     }
@@ -488,15 +491,44 @@ struct PreDuelView: View {
         .frame(maxWidth: .infinity)
     }
 
+    /// Starts the countdown synchronized to the server's `startedAt` timestamp.
+    /// Both devices use the same wall-clock reference so they reach GO! together
+    /// regardless of when their polling tick detected the `inProgress` transition.
     @MainActor
-    private func startCountdown() {
+    private func autoStartCountdown(startedAt: Date?) {
+        let totalCountdown: Double = 3
+        let elapsed = startedAt.map { max(0, Date().timeIntervalSince($0)) } ?? 0
+        let remaining = max(0, totalCountdown - elapsed)
+
+        Self.logger.info("autoStartCountdown — elapsed: \(elapsed, format: .fixed(precision: 2))s remaining: \(remaining, format: .fixed(precision: 2))s")
+
+        if remaining <= 0 {
+            // Both devices synced past the countdown window — go straight to arena
+            Self.logger.info("autoStartCountdown — skipping directly to arena (countdown window already elapsed)")
+            showArena = true
+            return
+        }
+
+        // Calculate which integer second we're currently in (3, 2, or 1)
+        let startValue = max(1, Int(ceil(remaining)))
+        countdown = startValue
+        withAnimation { phase = .countdown }
+
         Task {
-            for i in stride(from: 3, through: 1, by: -1) {
+            // Sleep for the fractional part first so we align to whole-second boundaries
+            let fractionalDelay = remaining - floor(remaining)
+            if fractionalDelay > 0.05 {
+                try? await Task.sleep(for: .milliseconds(Int(fractionalDelay * 1000)))
+            }
+            // Tick down to 1 (we already showed startValue)
+            for i in stride(from: startValue - 1, through: 1, by: -1) {
                 countdown = i
                 try? await Task.sleep(for: .seconds(1))
             }
-            try? await Task.sleep(for: .milliseconds(300))
-            showArena = true
+            // Brief "GO!" flash
+            countdown = 0
+            try? await Task.sleep(for: .milliseconds(500))
+            withAnimation { showArena = true }
         }
     }
 }

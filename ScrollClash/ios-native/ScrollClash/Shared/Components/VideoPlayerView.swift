@@ -16,7 +16,7 @@ struct VideoPlayerView: View {
             playbackTime: playbackTime,
             onPlaybackTimeUpdate: onPlaybackTimeUpdate
         )
-        .aspectRatio(9/16, contentMode: .fit)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .clipped()
     }
 }
@@ -87,7 +87,7 @@ private final class PlayerUIView: UIView {
         )
 
         let layer = AVPlayerLayer(player: newPlayer)
-        layer.videoGravity = .resizeAspect
+        layer.videoGravity = .resizeAspectFill
         layer.frame = bounds
         layer.backgroundColor = UIColor.black.cgColor
 

@@ -19,10 +19,13 @@ enum AppServices {
     }
 
     static func contentService() -> ContentServiceProtocol {
-        guard let (client, authService) = supabaseBundle else {
+        guard let (client, _) = supabaseBundle else {
             return MockContentService.shared
         }
-        return SupabaseContentService(client: client, authService: authService)
+        // Fetch directly from the reels table with public storage URLs.
+        // This reliably returns all uploaded MP4s regardless of whether a
+        // server-side content feed has been assigned to the match.
+        return DemoContentService(client: client, limit: 34)
     }
 
     static func syncService() -> SyncServiceProtocol {
