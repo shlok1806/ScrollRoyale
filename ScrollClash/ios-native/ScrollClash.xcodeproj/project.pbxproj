@@ -30,6 +30,29 @@
 		110021 /* BrainLabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210021 /* BrainLabView.swift */; };
 		110022 /* BoostInventoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210022 /* BoostInventoryView.swift */; };
 		110023 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 210023 /* Assets.xcassets */; };
+		110024 /* SRMatch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210024 /* SRMatch.swift */; };
+		110025 /* ContentItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210025 /* ContentItem.swift */; };
+		110026 /* GameState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210026 /* GameState.swift */; };
+		110027 /* ScoreSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210027 /* ScoreSnapshot.swift */; };
+		110028 /* Telemetry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210028 /* Telemetry.swift */; };
+		110029 /* SecondaryScreens.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210029 /* SecondaryScreens.swift */; };
+		110030 /* SupabaseClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210030 /* SupabaseClient.swift */; };
+		110031 /* SupabaseAuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210031 /* SupabaseAuthService.swift */; };
+		110032 /* AppServices.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210032 /* AppServices.swift */; };
+		110033 /* MatchmakingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210033 /* MatchmakingService.swift */; };
+		110034 /* ContentService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210034 /* ContentService.swift */; };
+		110035 /* SyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210035 /* SyncService.swift */; };
+		110036 /* LeaderboardService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210036 /* LeaderboardService.swift */; };
+		110037 /* ProfileService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210037 /* ProfileService.swift */; };
+		110038 /* SupabaseCachePolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210038 /* SupabaseCachePolicy.swift */; };
+		110039 /* SupabaseCacheStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210039 /* SupabaseCacheStore.swift */; };
+		110040 /* LobbyViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210040 /* LobbyViewModel.swift */; };
+		110041 /* GameViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210041 /* GameViewModel.swift */; };
+		110042 /* LeaderboardViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210042 /* LeaderboardViewModel.swift */; };
+		110043 /* ProfileViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210043 /* ProfileViewModel.swift */; };
+		110044 /* VideoPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210044 /* VideoPlayerView.swift */; };
+		110045 /* VideoFeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210045 /* VideoFeedView.swift */; };
+		110046 /* VideoCellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210046 /* VideoCellView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -56,6 +79,29 @@
 		210021 /* BrainLabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrainLabView.swift; sourceTree = "<group>"; };
 		210022 /* BoostInventoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoostInventoryView.swift; sourceTree = "<group>"; };
 		210023 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		210024 /* SRMatch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SRMatch.swift; sourceTree = "<group>"; };
+		210025 /* ContentItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentItem.swift; sourceTree = "<group>"; };
+		210026 /* GameState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameState.swift; sourceTree = "<group>"; };
+		210027 /* ScoreSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoreSnapshot.swift; sourceTree = "<group>"; };
+		210028 /* Telemetry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Telemetry.swift; sourceTree = "<group>"; };
+		210029 /* SecondaryScreens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecondaryScreens.swift; sourceTree = "<group>"; };
+		210030 /* SupabaseClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseClient.swift; sourceTree = "<group>"; };
+		210031 /* SupabaseAuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseAuthService.swift; sourceTree = "<group>"; };
+		210032 /* AppServices.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppServices.swift; sourceTree = "<group>"; };
+		210033 /* MatchmakingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchmakingService.swift; sourceTree = "<group>"; };
+		210034 /* ContentService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentService.swift; sourceTree = "<group>"; };
+		210035 /* SyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncService.swift; sourceTree = "<group>"; };
+		210036 /* LeaderboardService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeaderboardService.swift; sourceTree = "<group>"; };
+		210037 /* ProfileService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileService.swift; sourceTree = "<group>"; };
+		210038 /* SupabaseCachePolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseCachePolicy.swift; sourceTree = "<group>"; };
+		210039 /* SupabaseCacheStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseCacheStore.swift; sourceTree = "<group>"; };
+		210040 /* LobbyViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LobbyViewModel.swift; sourceTree = "<group>"; };
+		210041 /* GameViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameViewModel.swift; sourceTree = "<group>"; };
+		210042 /* LeaderboardViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeaderboardViewModel.swift; sourceTree = "<group>"; };
+		210043 /* ProfileViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileViewModel.swift; sourceTree = "<group>"; };
+		210044 /* VideoPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoPlayerView.swift; sourceTree = "<group>"; };
+		210045 /* VideoFeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoFeedView.swift; sourceTree = "<group>"; };
+		210046 /* VideoCellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoCellView.swift; sourceTree = "<group>"; };
 		310001 /* ScrollClash.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ScrollClash.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -83,6 +129,8 @@
 				611001 /* App */,
 				612001 /* Shared */,
 				613001 /* Models */,
+				615001 /* Services */,
+				616001 /* ViewModels */,
 				614001 /* Features */,
 				210023 /* Assets.xcassets */,
 			);
@@ -124,6 +172,9 @@
 				210007 /* ProgressRingView.swift */,
 				210008 /* GameIcons.swift */,
 				210009 /* AnimatedNumberView.swift */,
+				210044 /* VideoPlayerView.swift */,
+				210045 /* VideoFeedView.swift */,
+				210046 /* VideoCellView.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -133,8 +184,50 @@
 			children = (
 				210010 /* Models.swift */,
 				210011 /* MockData.swift */,
+				210024 /* SRMatch.swift */,
+				210025 /* ContentItem.swift */,
+				210026 /* GameState.swift */,
+				210027 /* ScoreSnapshot.swift */,
+				210028 /* Telemetry.swift */,
+				210029 /* SecondaryScreens.swift */,
 			);
 			path = Models;
+			sourceTree = "<group>";
+		};
+		615001 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				210030 /* SupabaseClient.swift */,
+				210031 /* SupabaseAuthService.swift */,
+				210032 /* AppServices.swift */,
+				210033 /* MatchmakingService.swift */,
+				210034 /* ContentService.swift */,
+				210035 /* SyncService.swift */,
+				210036 /* LeaderboardService.swift */,
+				210037 /* ProfileService.swift */,
+				615002 /* Cache */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		615002 /* Cache */ = {
+			isa = PBXGroup;
+			children = (
+				210038 /* SupabaseCachePolicy.swift */,
+				210039 /* SupabaseCacheStore.swift */,
+			);
+			path = Cache;
+			sourceTree = "<group>";
+		};
+		616001 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				210040 /* LobbyViewModel.swift */,
+				210041 /* GameViewModel.swift */,
+				210042 /* LeaderboardViewModel.swift */,
+				210043 /* ProfileViewModel.swift */,
+			);
+			path = ViewModels;
 			sourceTree = "<group>";
 		};
 		614001 /* Features */ = {
@@ -316,6 +409,29 @@
 				110020 /* DuelResultView.swift in Sources */,
 				110021 /* BrainLabView.swift in Sources */,
 				110022 /* BoostInventoryView.swift in Sources */,
+				110024 /* SRMatch.swift in Sources */,
+				110025 /* ContentItem.swift in Sources */,
+				110026 /* GameState.swift in Sources */,
+				110027 /* ScoreSnapshot.swift in Sources */,
+				110028 /* Telemetry.swift in Sources */,
+				110029 /* SecondaryScreens.swift in Sources */,
+				110030 /* SupabaseClient.swift in Sources */,
+				110031 /* SupabaseAuthService.swift in Sources */,
+				110032 /* AppServices.swift in Sources */,
+				110033 /* MatchmakingService.swift in Sources */,
+				110034 /* ContentService.swift in Sources */,
+				110035 /* SyncService.swift in Sources */,
+				110036 /* LeaderboardService.swift in Sources */,
+				110037 /* ProfileService.swift in Sources */,
+				110038 /* SupabaseCachePolicy.swift in Sources */,
+				110039 /* SupabaseCacheStore.swift in Sources */,
+				110040 /* LobbyViewModel.swift in Sources */,
+				110041 /* GameViewModel.swift in Sources */,
+				110042 /* LeaderboardViewModel.swift in Sources */,
+				110043 /* ProfileViewModel.swift in Sources */,
+				110044 /* VideoPlayerView.swift in Sources */,
+				110045 /* VideoFeedView.swift in Sources */,
+				110046 /* VideoCellView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -448,8 +564,8 @@
 				DEVELOPMENT_ASSET_PATHS = "";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_SUPABASE_ANON_KEY = REPLACE_WITH_SUPABASE_ANON_KEY;
-				INFOPLIST_KEY_SUPABASE_URL = REPLACE_WITH_SUPABASE_URL;
+				INFOPLIST_KEY_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlxdWlpcXdteWpueXF0cXhxdm9qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIzMTI4MTAsImV4cCI6MjA4Nzg4ODgxMH0.HRVfXW8ATF5ZlMrIkw1JVMa5Y4k3pDz9J8uUZ_c60cU";
+				INFOPLIST_KEY_SUPABASE_URL = "https://iquiiqwmyjnyqtqxqvoj.supabase.co";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -477,8 +593,8 @@
 				DEVELOPMENT_ASSET_PATHS = "";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_SUPABASE_ANON_KEY = REPLACE_WITH_SUPABASE_ANON_KEY;
-				INFOPLIST_KEY_SUPABASE_URL = REPLACE_WITH_SUPABASE_URL;
+				INFOPLIST_KEY_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlxdWlpcXdteWpueXF0cXhxdm9qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIzMTI4MTAsImV4cCI6MjA4Nzg4ODgxMH0.HRVfXW8ATF5ZlMrIkw1JVMa5Y4k3pDz9J8uUZ_c60cU";
+				INFOPLIST_KEY_SUPABASE_URL = "https://iquiiqwmyjnyqtqxqvoj.supabase.co";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

@@ -2,10 +2,11 @@ import SwiftUI
 
 struct ProfileView: View {
     @EnvironmentObject private var appState: AppState
+    @StateObject private var profileVM = ProfileViewModel(
+        service: AppServices.profileService()
+    )
     @State private var showBrainLab = false
     @State private var user = MockData.currentUser
-    @State private var loading = false
-    @State private var errorMessage: String?
 
     private let badges = MockData.badges
     private let skins = MockData.brainSkins
@@ -42,13 +43,13 @@ struct ProfileView: View {
                         .padding(.horizontal, 20)
                         .padding(.bottom, 16)
 
-                    if loading {
+                    if profileVM.isLoading {
                         ProgressView()
                             .tint(.white)
                             .padding(.bottom, 8)
                     }
 
-                    if let errorMessage {
+                    if let errorMessage = profileVM.errorMessage {
                         Text(errorMessage)
                             .font(.system(size: 11, weight: .bold))
                             .foregroundColor(.white)
@@ -85,7 +86,22 @@ struct ProfileView: View {
         .fullScreenCover(isPresented: $showBrainLab) {
             BrainLabView(onDismiss: { showBrainLab = false })
         }
-        .task { await loadProfileSummary() }
+        .task { loadProfileSummary() }
+        .onChange(of: profileVM.profile) { summary in
+            guard let summary else { return }
+            user = UserProfile(
+                username: summary.displayName,
+                level: user.level,
+                rank: max(1, summary.matchesPlayed - summary.wins + 1),
+                trophies: Int(summary.bestScore.rounded()),
+                winRate: summary.matchesPlayed > 0 ? Int((Double(summary.wins) / Double(summary.matchesPlayed) * 100).rounded()) : 0,
+                totalDuels: summary.matchesPlayed,
+                bestStreak: user.bestStreak,
+                bestStability: user.bestStability,
+                avgRot: user.avgRot,
+                rankTitle: user.rankTitle
+            )
+        }
     }
 
     // MARK: Profile Header
@@ -306,28 +322,7 @@ struct ProfileView: View {
         }
     }
 
-    private func loadProfileSummary() async {
-        loading = true
-        guard let summary = await appState.fetchProfileSummary() else {
-            loading = false
-            if appState.matchmakingSourceLabel == "supabase" {
-                errorMessage = "Using local profile fallback."
-            }
-            return
-        }
-        user = UserProfile(
-            username: summary.displayName,
-            level: user.level,
-            rank: max(1, summary.matchesPlayed - summary.wins + 1),
-            trophies: Int(summary.bestScore.rounded()),
-            winRate: summary.matchesPlayed > 0 ? Int((Double(summary.wins) / Double(summary.matchesPlayed) * 100).rounded()) : 0,
-            totalDuels: summary.matchesPlayed,
-            bestStreak: user.bestStreak,
-            bestStability: user.bestStability,
-            avgRot: user.avgRot,
-            rankTitle: user.rankTitle
-        )
-        errorMessage = nil
-        loading = false
+    private func loadProfileSummary() {
+        profileVM.load()
     }
 }

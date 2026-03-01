@@ -7,6 +7,9 @@ enum Tab: Int, CaseIterable {
 struct MainTabView: View {
     @State private var selectedTab: Tab = .home
     @State private var showDuel = false
+    @StateObject private var lobbyVM = LobbyViewModel(
+        matchmakingService: AppServices.matchmakingService()
+    )
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -32,7 +35,7 @@ struct MainTabView: View {
             CustomTabBar(selectedTab: $selectedTab, onDuelTap: { showDuel = true })
         }
         .fullScreenCover(isPresented: $showDuel) {
-            PreDuelView(onDismiss: { showDuel = false })
+            PreDuelView(lobbyVM: lobbyVM, onDismiss: { showDuel = false })
         }
         .ignoresSafeArea(edges: .bottom)
     }

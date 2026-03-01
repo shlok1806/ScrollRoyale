@@ -2,10 +2,11 @@ import SwiftUI
 
 struct LeaderboardView: View {
     @EnvironmentObject private var appState: AppState
+    @StateObject private var leaderboardVM = LeaderboardViewModel(
+        service: AppServices.leaderboardService()
+    )
     @State private var activeTab: LeaderboardTab = .global
     @State private var data: [LeaderboardPlayer] = MockData.leaderboardData
-    @State private var loading = false
-    @State private var errorMessage: String?
 
     enum LeaderboardTab { case global, friends }
 
@@ -42,13 +43,13 @@ struct LeaderboardView: View {
                     .padding(.horizontal, 20)
                     .padding(.bottom, 8)
 
-                if loading {
+                if leaderboardVM.isLoading {
                     ProgressView()
                         .tint(.white)
                         .padding(.bottom, 8)
                 }
 
-                if let errorMessage {
+                if let errorMessage = leaderboardVM.errorMessage {
                     Text(errorMessage)
                         .font(.system(size: 11, weight: .bold))
                         .foregroundColor(.white)
@@ -75,10 +76,13 @@ struct LeaderboardView: View {
                 }
             }
         }
-        .task { await loadLeaderboard() }
+    .task { loadLeaderboard() }
+    .onChange(of: leaderboardVM.entries) { entries in
+        applyLeaderboardEntries(entries)
     }
+  }
 
-    private var visibleData: [LeaderboardPlayer] {
+  private var visibleData: [LeaderboardPlayer] {
         switch activeTab {
         case .global:
             return data
@@ -179,17 +183,15 @@ struct LeaderboardView: View {
         }
     }
 
-    private func loadLeaderboard() async {
-        loading = true
-        let entries = await appState.fetchGlobalLeaderboard(limit: 50)
-        if entries.isEmpty {
-            loading = false
-            if appState.matchmakingSourceLabel == "supabase" {
-                errorMessage = "Using local leaderboard fallback."
-            }
-            return
-        }
-        let mapped = entries.enumerated().map { idx, item in
+    private func loadLeaderboard() {
+        leaderboardVM.load()
+        // Sync leaderboardVM entries into local data when they arrive
+        // Watch for changes via onChange
+    }
+
+    private func applyLeaderboardEntries(_ entries: [LeaderboardEntry]) {
+        guard !entries.isEmpty else { return }
+        data = entries.enumerated().map { idx, item in
             LeaderboardPlayer(
                 rank: idx + 1,
                 name: item.displayName,
@@ -198,9 +200,6 @@ struct LeaderboardView: View {
                 rotLevel: max(10, min(90, 20 + idx * 3))
             )
         }
-        data = mapped
-        errorMessage = nil
-        loading = false
     }
 }
 

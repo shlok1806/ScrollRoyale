@@ -3,8 +3,8 @@ import AVKit
 
 struct DuelArenaView: View {
     @EnvironmentObject private var appState: AppState
+    let match: Match?
     let opponent: DuelOpponent
-    let matchId: String?
     let onDismiss: () -> Void
 
     private let matchDuration = 90
@@ -12,7 +12,6 @@ struct DuelArenaView: View {
 
     @State private var timeLeft = 90
     @State private var videoTimeLeft = 10
-    @State private var currentVideoIndex = 0
     @State private var yourHP = 1000
     @State private var opponentHP = 1000
     @State private var bankedDamage = 0
@@ -22,9 +21,12 @@ struct DuelArenaView: View {
     @State private var reactionActive = false
     @State private var damagePopups: [(id: UUID, damage: Int, isYou: Bool)] = []
     @State private var showResult = false
-    @State private var feedItems: [MatchFeedItem] = []
-    @State private var liveScore: Double = 0
-    @State private var telemetryBuffer: [TelemetryEvent] = []
+
+    // VideoFeedView bindings
+    @State private var scrollOffset: Double = 0
+    @State private var currentVideoIndex = 0
+    @State private var playbackTime: Double = 0
+
     private let boostDeck = [
         (id: 1, name: "Shield", focusCost: 3, cooldown: 0, available: true),
         (id: 2, name: "Double", focusCost: 5, cooldown: 3, available: false),
@@ -32,32 +34,74 @@ struct DuelArenaView: View {
         (id: 4, name: "Rage",   focusCost: 6, cooldown: 5, available: false),
     ]
 
+    @StateObject private var gameVM: GameViewModel
+
+    init(match: Match?, opponent: DuelOpponent, onDismiss: @escaping () -> Void) {
+        self.match = match
+        self.opponent = opponent
+        self.onDismiss = onDismiss
+
+        let userId = SupabaseSessionStore.shared.userId ?? "demo-user"
+        let effectiveMatch = match ?? Match(
+            id: "demo-\(UUID().uuidString)",
+            matchCode: "DEMO",
+            player1Id: userId,
+            player2Id: nil,
+            status: .inProgress,
+            createdAt: Date(),
+            startedAt: Date(),
+            endedAt: nil,
+            durationSec: 90,
+            contentFeedIds: []
+        )
+
+        if match != nil {
+            // Live match: use Supabase content + sync services
+            _gameVM = StateObject(wrappedValue: GameViewModel(
+                match: effectiveMatch,
+                currentUserId: userId,
+                contentService: AppServices.contentService(),
+                syncService: AppServices.syncService()
+            ))
+        } else {
+            // Demo mode: fetch reels table directly, no sync needed
+            _gameVM = StateObject(wrappedValue: GameViewModel(
+                match: effectiveMatch,
+                currentUserId: userId,
+                contentService: AppServices.demoContentService(),
+                syncService: MockSyncService.shared
+            ))
+        }
+    }
+
     private var timerProgress: Double { Double(timeLeft) / Double(matchDuration) }
     private var yourHPPercent:   Double { Double(yourHP) / 1000 }
     private var opponentHPPercent: Double { Double(opponentHP) / 1000 }
-    private var totalVideos: Int { max(1, feedItems.isEmpty ? 9 : feedItems.count) }
-    private var currentFeedItem: MatchFeedItem? {
-        guard currentVideoIndex >= 0, currentVideoIndex < feedItems.count else { return nil }
-        return feedItems[currentVideoIndex]
-    }
-    private var currentPlaybackURL: URL? {
-        resolvedVideoURL(from: currentFeedItem?.signedVideoURL)
-    }
+    private var totalVideos: Int { max(1, gameVM.contentItems.isEmpty ? 9 : gameVM.contentItems.count) }
 
     var body: some View {
-        // Use a plain ZStack — DuelArena is already inside a fullScreenCover from PreDuelView.
-        // Avoid nesting another fullScreenCover (causes orientation-transaction warnings).
-        // Instead, slide DuelResultView in as a ZStack overlay.
         GeometryReader { geo in
             ZStack {
-                // Video background
-                VideoPlaceholderView(
-                    videoNumber: currentVideoIndex + 1,
-                    totalVideos: totalVideos,
-                    sourceHint: currentFeedItem?.signedVideoURL,
-                    playbackURL: currentPlaybackURL
-                )
-                    .gesture(swipeGesture)
+                // Video feed background
+                if gameVM.contentItems.isEmpty {
+                    VideoPlaceholderView(
+                        videoNumber: currentVideoIndex + 1,
+                        totalVideos: totalVideos,
+                        sourceHint: nil,
+                        playbackURL: nil
+                    )
+                } else {
+                    VideoFeedView(
+                        items: gameVM.contentItems,
+                        scrollOffset: $scrollOffset,
+                        currentIndex: $currentVideoIndex,
+                        playbackTime: $playbackTime,
+                        onScroll: { offset, index, time in
+                            gameVM.handleScroll(offset: offset, videoIndex: index, playbackTime: time)
+                        }
+                    )
+                    .ignoresSafeArea()
+                }
 
                 // Gradient overlays
                 VStack {
@@ -71,7 +115,31 @@ struct DuelArenaView: View {
                 }
                 .ignoresSafeArea()
 
-                // HUD — top safe-area padding keeps content below status bar
+                // Loading overlay
+                if gameVM.isLoading {
+                    VStack(spacing: 12) {
+                        ProgressView()
+                            .tint(NeonTheme.green)
+                            .scaleEffect(1.5)
+                        Text("Loading reels...")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundColor(.white.opacity(0.8))
+                    }
+                    .padding(20)
+                    .background(Color.black.opacity(0.7))
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                }
+
+                if let msg = gameVM.feedStatusMessage, !gameVM.isLoading {
+                    Text(msg)
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(.white.opacity(0.8))
+                        .padding(10)
+                        .background(Color.black.opacity(0.6))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+
+                // HUD
                 VStack(spacing: 0) {
                     topHUD
                         .padding(.horizontal, 16)
@@ -118,7 +186,7 @@ struct DuelArenaView: View {
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
 
-                // Result overlay — replaces nested fullScreenCover to avoid orientation warnings
+                // Result overlay
                 if showResult {
                     DuelResultView(opponent: opponent, onDismiss: { showResult = false; onDismiss() })
                         .transition(.move(edge: .bottom))
@@ -128,22 +196,19 @@ struct DuelArenaView: View {
             .ignoresSafeArea()
         }
         .ignoresSafeArea()
+        .onAppear { gameVM.startSync() }
+        .onDisappear { gameVM.stopSync() }
         .task { await runMatchTimer() }
         .task { await runVideoTimer() }
         .task { await simulateOpponentDamage() }
         .task { await runFocusRecharge() }
-        .task { await loadFeedIfAvailable() }
-        .task { await runScorePolling() }
-        .task { await flushTelemetryLoop() }
     }
 
     // MARK: Top HUD
 
     private var topHUD: some View {
         VStack(spacing: 10) {
-            // Forfeit + players
             HStack(alignment: .top) {
-                // You
                 HStack(spacing: 8) {
                     playerAvatar(brain: appState.customization, rotLevel: 25, bg: NeonTheme.purpleDark)
                     VStack(alignment: .leading, spacing: 0) {
@@ -155,7 +220,6 @@ struct DuelArenaView: View {
 
                 Spacer()
 
-                // Forfeit
                 Button(action: { withAnimation(.easeInOut(duration: 0.3)) { showResult = true } }) {
                     Text("FORFEIT")
                         .font(.system(size: 11, weight: .black))
@@ -173,7 +237,6 @@ struct DuelArenaView: View {
 
                 Spacer()
 
-                // Opponent
                 HStack(spacing: 8) {
                     VStack(alignment: .trailing, spacing: 0) {
                         Text(opponent.name).font(.system(size: 12, weight: .black)).foregroundColor(.white)
@@ -188,23 +251,21 @@ struct DuelArenaView: View {
                 }
             }
 
-            // Timer ring + HP bar
             VStack(spacing: 6) {
                 timerRing
 
-                if let matchId {
+                if let matchId = match?.id {
                     HStack {
                         Text("MATCH \(matchId.prefix(6).uppercased())")
                             .font(.system(size: 9, weight: .bold))
                             .foregroundColor(.white.opacity(0.7))
                         Spacer()
-                        Text("SCORE \(Int(liveScore))")
+                        Text("SCORE \(Int(gameVM.localScore))")
                             .font(.system(size: 10, weight: .black))
                             .foregroundColor(NeonTheme.yellow)
                     }
                 }
 
-                // HP bar
                 VStack(spacing: 4) {
                     HStack {
                         Text("\(yourHP)")
@@ -324,9 +385,7 @@ struct DuelArenaView: View {
     // MARK: Reaction Button
 
     private var reactionButton: some View {
-        Button {
-            // Reaction tap action
-        } label: {
+        Button { } label: {
             ZStack {
                 Circle()
                     .fill(reactionActive ? NeonTheme.pink : Color.white.opacity(0.2))
@@ -426,68 +485,9 @@ struct DuelArenaView: View {
                 ) {
                     if boost.available && focusMeter >= boost.focusCost {
                         focusMeter = max(0, focusMeter - boost.focusCost)
-                        queueTelemetry(eventType: "boost", payload: [
-                            "focus_spent": Double(boost.focusCost),
-                            "video_index": Double(currentVideoIndex)
-                        ])
                     }
                 }
             }
-        }
-    }
-
-    // MARK: Swipe Gesture
-
-    private var swipeGesture: some Gesture {
-        DragGesture(minimumDistance: 50)
-            .onEnded { value in
-                if value.translation.height < -50 {
-                    swipe(up: true)
-                } else if value.translation.height > 50 {
-                    swipe(up: false)
-                }
-            }
-    }
-
-    private func swipe(up: Bool) {
-        if up && currentVideoIndex < totalVideos - 1 {
-            currentVideoIndex += 1
-            videoTimeLeft = videoDuration
-            applyBankedDamage()
-            queueTelemetry(eventType: "scroll", payload: [
-                "velocity": 1.0,
-                "video_index": Double(currentVideoIndex),
-                "playback_time": Double(videoDuration - videoTimeLeft)
-            ])
-        } else if !up && currentVideoIndex > 0 {
-            currentVideoIndex -= 1
-            videoTimeLeft = videoDuration
-            bankedDamage = 0
-            queueTelemetry(eventType: "scroll_back", payload: [
-                "velocity": -1.0,
-                "video_index": Double(currentVideoIndex),
-                "playback_time": Double(videoDuration - videoTimeLeft)
-            ])
-        }
-    }
-
-    private func applyBankedDamage() {
-        let final = Int(Double(bankedDamage) * multiplier)
-        if final > 0 {
-            withAnimation { opponentHP = max(0, opponentHP - final) }
-            addPopup(final, isYou: false)
-            comboMeter = min(5, comboMeter + 1)
-            multiplier = min(3.0, multiplier + 0.2)
-        }
-        bankedDamage = 0
-    }
-
-    private func addPopup(_ damage: Int, isYou: Bool) {
-        let entry = (id: UUID(), damage: damage, isYou: isYou)
-        withAnimation { damagePopups.append(entry) }
-        Task {
-            try? await Task.sleep(for: .seconds(1.5))
-            withAnimation { damagePopups.removeAll { $0.id == entry.id } }
         }
     }
 
@@ -540,81 +540,28 @@ struct DuelArenaView: View {
         }
     }
 
-    private func loadFeedIfAvailable() async {
-        guard let matchId else { return }
-        let items = await appState.fetchFeed(matchId: matchId)
-        await MainActor.run {
-            feedItems = items
-            if currentVideoIndex >= feedItems.count {
-                currentVideoIndex = max(0, feedItems.count - 1)
-            }
+    private func applyBankedDamage() {
+        let final = Int(Double(bankedDamage) * multiplier)
+        if final > 0 {
+            withAnimation { opponentHP = max(0, opponentHP - final) }
+            addPopup(final, isYou: false)
+            comboMeter = min(5, comboMeter + 1)
+            multiplier = min(3.0, multiplier + 0.2)
         }
+        bankedDamage = 0
     }
 
-    private func runScorePolling() async {
-        guard let matchId else { return }
-        while true {
-            if let snapshot = await appState.fetchLatestScore(matchId: matchId) {
-                await MainActor.run {
-                    liveScore = snapshot.score
-                }
-            }
-            try? await Task.sleep(for: .seconds(1))
+    private func addPopup(_ damage: Int, isYou: Bool) {
+        let entry = (id: UUID(), damage: damage, isYou: isYou)
+        withAnimation { damagePopups.append(entry) }
+        Task {
+            try? await Task.sleep(for: .seconds(1.5))
+            withAnimation { damagePopups.removeAll { $0.id == entry.id } }
         }
-    }
-
-    private func queueTelemetry(eventType: String, payload: [String: Double]) {
-        guard let item = currentFeedItem else { return }
-        telemetryBuffer.append(
-            TelemetryEvent(
-                reelID: item.reelID,
-                eventType: eventType,
-                clientEventID: UUID().uuidString,
-                occurredAt: ISO8601DateFormatter().string(from: Date()),
-                payload: payload
-            )
-        )
-    }
-
-    private func flushTelemetryLoop() async {
-        guard let matchId else { return }
-        while true {
-            try? await Task.sleep(for: .milliseconds(400))
-            if telemetryBuffer.isEmpty { continue }
-            let batch = telemetryBuffer
-            telemetryBuffer.removeAll()
-            await appState.ingestTelemetry(matchId: matchId, events: batch)
-        }
-    }
-
-    private func resolvedVideoURL(from raw: String?) -> URL? {
-        guard let raw, !raw.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
-        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines).trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-        if trimmed.lowercased().hasPrefix("http://") || trimmed.lowercased().hasPrefix("https://") {
-            return URL(string: trimmed)
-        }
-
-        guard let base = Bundle.main.object(forInfoDictionaryKey: "SUPABASE_URL") as? String,
-              !base.isEmpty else {
-            return nil
-        }
-
-        let path: String
-        if trimmed.contains("/") {
-            path = trimmed
-        } else {
-            path = "reels/\(trimmed)"
-        }
-
-        let encodedPath = path
-            .split(separator: "/")
-            .map { String($0).addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? String($0) }
-            .joined(separator: "/")
-        return URL(string: "\(base)/storage/v1/object/public/\(encodedPath)")
     }
 }
 
-// MARK: - Video Placeholder
+// MARK: - Video Placeholder (fallback only)
 
 struct VideoPlaceholderView: View {
     let videoNumber: Int
@@ -624,7 +571,6 @@ struct VideoPlaceholderView: View {
 
     @State private var player: AVPlayer?
     @State private var didEndObserver: NSObjectProtocol?
-    @State private var didFailObserver: NSObjectProtocol?
 
     var body: some View {
         ZStack {
@@ -632,29 +578,19 @@ struct VideoPlaceholderView: View {
             if let player {
                 VideoPlayer(player: player)
                     .ignoresSafeArea()
-                    .onAppear {
-                        player.play()
-                    }
+                    .onAppear { player.play() }
             }
             LinearGradient(
                 colors: [Color(hex: "1a0a2e").opacity(0.6), Color(hex: "0f0520").opacity(0.4), Color(hex: "050509").opacity(0.6)],
                 startPoint: .top, endPoint: .bottom
             )
-
             VStack(spacing: 8) {
-                Text(player == nil ? "MP4 PLACEHOLDER" : "LIVE VIDEO")
+                Text("LOADING REELS...")
                     .font(.system(size: 11, weight: .bold))
                     .foregroundColor(.white.opacity(0.5))
                 Text("VIDEO \(videoNumber) / \(totalVideos)")
                     .font(.system(size: 36, weight: .black))
                     .foregroundColor(.white)
-                if let sourceHint, !sourceHint.isEmpty {
-                    Text(sourceHint)
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundColor(.white.opacity(0.5))
-                        .lineLimit(2)
-                        .multilineTextAlignment(.center)
-                }
             }
             .padding(.horizontal, 32)
             .padding(.vertical, 24)
@@ -665,51 +601,21 @@ struct VideoPlaceholderView: View {
         .ignoresSafeArea()
         .onAppear { configurePlayerIfNeeded() }
         .onChange(of: playbackURL?.absoluteString) { _ in configurePlayerIfNeeded() }
-        .onDisappear { cleanupPlayerObservers() }
     }
 
     private func configurePlayerIfNeeded() {
-        cleanupPlayerObservers()
-        guard let playbackURL else {
-            player = nil
-            return
-        }
-
+        guard let playbackURL else { player = nil; return }
         let item = AVPlayerItem(url: playbackURL)
         let avPlayer = AVPlayer(playerItem: item)
         avPlayer.isMuted = true
         player = avPlayer
-
         didEndObserver = NotificationCenter.default.addObserver(
-            forName: .AVPlayerItemDidPlayToEndTime,
-            object: item,
-            queue: .main
+            forName: .AVPlayerItemDidPlayToEndTime, object: item, queue: .main
         ) { _ in
             avPlayer.seek(to: .zero)
             avPlayer.play()
         }
-
-        didFailObserver = NotificationCenter.default.addObserver(
-            forName: .AVPlayerItemFailedToPlayToEndTime,
-            object: item,
-            queue: .main
-        ) { notification in
-            print("Video playback failed for URL \(playbackURL.absoluteString): \(notification.userInfo ?? [:])")
-        }
-
         avPlayer.play()
-    }
-
-    private func cleanupPlayerObservers() {
-        if let didEndObserver {
-            NotificationCenter.default.removeObserver(didEndObserver)
-            self.didEndObserver = nil
-        }
-        if let didFailObserver {
-            NotificationCenter.default.removeObserver(didFailObserver)
-            self.didFailObserver = nil
-        }
-        player?.pause()
     }
 }
 
@@ -729,14 +635,9 @@ struct BoostCardMiniView: View {
         Button(action: { if usable { onTap() } }) {
             ZStack {
                 VStack(spacing: 0) {
-                    // Icon area
                     ZStack(alignment: .topTrailing) {
-                        Color.white
-                            .frame(height: 56)
-
+                        Color.white.frame(height: 56)
                         BoostTypeIcon(iconType: iconType, size: 28, color: iconColor)
-
-                        // Focus cost badge
                         HStack(spacing: 2) {
                             Circle().fill(NeonTheme.cyan).frame(width: 6, height: 6)
                             Text("\(focusCost)")
@@ -750,8 +651,6 @@ struct BoostCardMiniView: View {
                         .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.black, lineWidth: 1.5))
                         .padding(4)
                     }
-
-                    // Name
                     Text(name.uppercased())
                         .font(.system(size: 9, weight: .black))
                         .foregroundColor(.black)
@@ -765,19 +664,12 @@ struct BoostCardMiniView: View {
                 .shadow(color: .black.opacity(0.8), radius: 0, x: 0, y: 4)
                 .opacity(usable ? 1 : 0.5)
 
-                // Cooldown overlay
                 if cooldown > 0 {
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(Color.black.opacity(0.7))
-                    Text("\(cooldown)s")
-                        .font(.system(size: 20, weight: .black))
-                        .foregroundColor(.white)
+                    RoundedRectangle(cornerRadius: 10).fill(Color.black.opacity(0.7))
+                    Text("\(cooldown)s").font(.system(size: 20, weight: .black)).foregroundColor(.white)
                 }
-
-                // Active glow
                 if usable {
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(NeonTheme.green.opacity(0.2))
+                    RoundedRectangle(cornerRadius: 10).fill(NeonTheme.green.opacity(0.2))
                 }
             }
             .frame(width: 76, height: 100)

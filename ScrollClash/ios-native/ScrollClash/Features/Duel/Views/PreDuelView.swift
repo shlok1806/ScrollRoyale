@@ -2,30 +2,23 @@ import SwiftUI
 
 struct PreDuelView: View {
     @EnvironmentObject private var appState: AppState
+    @ObservedObject var lobbyVM: LobbyViewModel
     let onDismiss: () -> Void
 
     enum Phase { case searching, found, countdown }
-    enum MatchMode { case quick, joinCode }
 
     @State private var phase: Phase = .searching
     @State private var countdown = 3
     @State private var dots = ""
     @State private var showArena = false
-    @State private var mode: MatchMode = .quick
-    @State private var joinCode = ""
-    @State private var isSubmitting = false
-    @State private var waitingForJoin = false
-    @State private var hostedCode: String?
-    @State private var opponent = MockData.defaultOpponent
-    @State private var matchDuration = 60
+    @State private var showDemoArena = false
+    @State private var matchDuration = 90
     @State private var trophyDelta = 25
     @State private var boostSlots = 4
-    @State private var matchId: String? = nil
-    @State private var matchmakingError: String?
+    @State private var opponent = MockData.defaultOpponent
 
     var body: some View {
         ZStack {
-            // Matchmaking UI
             if !showArena {
                 StripedBackground().ignoresSafeArea()
                     .overlay(
@@ -39,7 +32,10 @@ struct PreDuelView: View {
                 VStack(spacing: 0) {
                     // Header
                     HStack {
-                        Button(action: onDismiss) {
+                        Button(action: {
+                            lobbyVM.reset()
+                            onDismiss()
+                        }) {
                             ZStack {
                                 Circle()
                                     .fill(NeonTheme.pink)
@@ -69,7 +65,6 @@ struct PreDuelView: View {
 
                     Spacer()
 
-                    // Phase content
                     Group {
                         if phase == .searching {
                             searchingView
@@ -82,21 +77,44 @@ struct PreDuelView: View {
                     .animation(.easeInOut(duration: 0.3), value: phase)
 
                     Spacer()
-
                     Color.clear.frame(height: 32)
                 }
                 .transition(.opacity)
             }
 
-            // Arena replaces this view in-place — avoids nested fullScreenCover
-            // which triggers iOS orientation-transaction re-entry warnings.
-            if showArena {
-                DuelArenaView(opponent: opponent, matchId: matchId, onDismiss: { showArena = false; onDismiss() })
-                    .transition(.move(edge: .bottom))
-                    .zIndex(10)
+            if showArena, let match = lobbyVM.currentMatch {
+                DuelArenaView(
+                    match: match,
+                    opponent: opponent,
+                    onDismiss: { showArena = false; lobbyVM.reset(); onDismiss() }
+                )
+                .transition(.move(edge: .bottom))
+                .zIndex(10)
+            }
+
+            if showDemoArena {
+                DuelArenaView(
+                    match: nil,
+                    opponent: MockData.defaultOpponent,
+                    onDismiss: { withAnimation { showDemoArena = false } }
+                )
+                .environmentObject(appState)
+                .transition(.move(edge: .bottom))
+                .zIndex(20)
             }
         }
         .animation(.easeInOut(duration: 0.3), value: showArena)
+        .animation(.easeInOut(duration: 0.3), value: showDemoArena)
+        .onChange(of: lobbyVM.currentMatch) { match in
+            guard let match, match.status == .inProgress else { return }
+            // Host: only advance if we actually displayed a code (we created the match)
+            // Joiner: lobbyVM.mode == .joining means we joined via a code
+            let isHost = !lobbyVM.hostedMatchCode.isEmpty
+            let isJoiner = lobbyVM.mode == .joining
+            guard isHost || isJoiner else { return }
+            matchDuration = match.durationSec
+            phase = .found
+        }
     }
 
     private var headerTitle: String {
@@ -125,94 +143,25 @@ struct PreDuelView: View {
                 .font(.system(size: 80, weight: .black))
                 .foregroundColor(NeonTheme.green)
                 .shadow(color: NeonTheme.green.opacity(0.6), radius: 20)
-                .rotationEffect(.degrees(showArena ? 0 : 0))
 
             VStack(spacing: 8) {
                 Text("SEARCHING\(animatedDots)")
                     .font(.system(size: 28, weight: .black))
                     .foregroundColor(.white)
                     .shadow(color: .black.opacity(0.5), radius: 0, x: 2, y: 2)
-                Text(mode == .quick ? "Generate code and wait for someone to join" : "Join a friend with code")
+                Text(lobbyVM.mode == .joining ? "Join a friend with code" : "Generate code and wait for someone to join")
                     .font(.system(size: 15, weight: .bold))
                     .foregroundColor(.white.opacity(0.7))
             }
 
-            if mode == .quick {
-                VStack(spacing: 10) {
-                    if let hostedCode {
-                        VStack(spacing: 6) {
-                            Text("SHARE THIS CODE")
-                                .font(.system(size: 11, weight: .bold))
-                                .foregroundColor(.white.opacity(0.7))
-                            Text(hostedCode)
-                                .font(.system(size: 34, weight: .black, design: .monospaced))
-                                .foregroundColor(NeonTheme.yellow)
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 8)
-                                .background(Color.black.opacity(0.5))
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
-                                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.black, lineWidth: 3))
-                        }
-                    }
-
-                    Button {
-                        Task { await createCodeAndWait() }
-                    } label: {
-                        Text(quickButtonTitle)
-                            .font(.system(size: 18, weight: .black))
-                            .foregroundColor(.black)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 52)
-                            .background(NeonTheme.green)
-                            .clipShape(RoundedRectangle(cornerRadius: 14))
-                            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.black, lineWidth: 4))
-                            .shadow(color: .black.opacity(0.8), radius: 0, x: 0, y: 5)
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(isSubmitting)
-                    .opacity(isSubmitting ? 0.6 : 1)
-                    .padding(.horizontal, 20)
-                }
+            if lobbyVM.mode == .hosting || lobbyVM.mode == .idle {
+                quickMatchSection
             } else {
-                VStack(spacing: 10) {
-                    TextField("Enter match code", text: $joinCode)
-                        .textInputAutocapitalization(.characters)
-                        .autocorrectionDisabled(true)
-                        .font(.system(size: 15, weight: .black))
-                        .foregroundColor(.black)
-                        .padding(.horizontal, 12)
-                        .frame(height: 48)
-                        .background(NeonTheme.yellow)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.black, lineWidth: 3))
-                        .padding(.horizontal, 20)
-                        .onChange(of: joinCode) { value in
-                            let filtered = value.uppercased().filter { $0.isNumber || $0.isLetter }
-                            joinCode = String(filtered.prefix(6))
-                        }
-
-                    Button {
-                        Task { await joinMatchByCode() }
-                    } label: {
-                        Text(isSubmitting ? "JOINING..." : "JOIN MATCH")
-                            .font(.system(size: 18, weight: .black))
-                            .foregroundColor(.black)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 52)
-                            .background(NeonTheme.green)
-                            .clipShape(RoundedRectangle(cornerRadius: 14))
-                            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.black, lineWidth: 4))
-                            .shadow(color: .black.opacity(0.8), radius: 0, x: 0, y: 5)
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(isSubmitting || joinCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                    .opacity((isSubmitting || joinCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) ? 0.6 : 1)
-                    .padding(.horizontal, 20)
-                }
+                joinCodeSection
             }
 
-            if let matchmakingError {
-                Text(matchmakingError)
+            if let err = lobbyVM.errorMessage {
+                Text(err)
                     .font(.system(size: 11, weight: .bold))
                     .foregroundColor(.white)
                     .padding(.horizontal, 12)
@@ -220,6 +169,19 @@ struct PreDuelView: View {
                     .background(NeonTheme.pink.opacity(0.8))
                     .clipShape(RoundedRectangle(cornerRadius: 10))
                     .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.black, lineWidth: 2))
+                    .padding(.horizontal, 20)
+            }
+
+            if lobbyVM.isLoading {
+                ProgressView()
+                    .tint(NeonTheme.green)
+                    .scaleEffect(1.3)
+            }
+
+            if !lobbyVM.statusMessage.isEmpty {
+                Text(lobbyVM.statusMessage)
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundColor(.white.opacity(0.8))
                     .padding(.horizontal, 20)
             }
         }
@@ -232,20 +194,119 @@ struct PreDuelView: View {
     }
 
     private var animatedDots: String { dots }
+
+    // MARK: Quick Match Section
+
+    private var quickMatchSection: some View {
+        VStack(spacing: 10) {
+            if !lobbyVM.hostedMatchCode.isEmpty {
+                VStack(spacing: 6) {
+                    Text("SHARE THIS CODE")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(.white.opacity(0.7))
+                    Text(lobbyVM.hostedMatchCode)
+                        .font(.system(size: 34, weight: .black, design: .monospaced))
+                        .foregroundColor(NeonTheme.yellow)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(Color.black.opacity(0.5))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.black, lineWidth: 3))
+                }
+            }
+
+            Button {
+                lobbyVM.reset()
+                lobbyVM.createMatch()
+            } label: {
+                Text(quickButtonTitle)
+                    .font(.system(size: 18, weight: .black))
+                    .foregroundColor(.black)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 52)
+                    .background(NeonTheme.green)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.black, lineWidth: 4))
+                    .shadow(color: .black.opacity(0.8), radius: 0, x: 0, y: 5)
+            }
+            .buttonStyle(.plain)
+            .disabled(lobbyVM.isLoading)
+            .opacity(lobbyVM.isLoading ? 0.6 : 1)
+            .padding(.horizontal, 20)
+
+            Button {
+                withAnimation { showDemoArena = true }
+            } label: {
+                Text("OPEN DEMO REEL MATCH")
+                    .font(.system(size: 13, weight: .black))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 40)
+                    .background(Color.black.opacity(0.5))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.2), lineWidth: 2))
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 20)
+        }
+    }
+
     private var quickButtonTitle: String {
-        if waitingForJoin && isSubmitting { return "WAITING FOR JOIN..." }
-        if hostedCode != nil { return "REGENERATE CODE" }
+        if lobbyVM.isLoading && lobbyVM.mode == .hosting { return "WAITING FOR JOIN..." }
+        if !lobbyVM.hostedMatchCode.isEmpty { return "REGENERATE CODE" }
         return "GENERATE MATCH CODE"
     }
 
+    // MARK: Join Code Section
+
+    private var joinCodeSection: some View {
+        VStack(spacing: 10) {
+            TextField("Enter match code", text: $lobbyVM.joinCodeInput)
+                .textInputAutocapitalization(.characters)
+                .autocorrectionDisabled(true)
+                .font(.system(size: 15, weight: .black))
+                .foregroundColor(.black)
+                .padding(.horizontal, 12)
+                .frame(height: 48)
+                .background(NeonTheme.yellow)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.black, lineWidth: 3))
+                .padding(.horizontal, 20)
+                .onChange(of: lobbyVM.joinCodeInput) { value in
+                    let filtered = value.uppercased().filter { $0.isNumber || ("A"..."Z").contains($0) }
+                    lobbyVM.joinCodeInput = String(filtered.prefix(6))
+                }
+
+            Button {
+                lobbyVM.joinMatchWithCode()
+            } label: {
+                Text(lobbyVM.isLoading ? "JOINING..." : "JOIN MATCH")
+                    .font(.system(size: 18, weight: .black))
+                    .foregroundColor(.black)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 52)
+                    .background(NeonTheme.green)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.black, lineWidth: 4))
+                    .shadow(color: .black.opacity(0.8), radius: 0, x: 0, y: 5)
+            }
+            .buttonStyle(.plain)
+            .disabled(lobbyVM.isLoading || lobbyVM.joinCodeInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            .opacity((lobbyVM.isLoading || lobbyVM.joinCodeInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) ? 0.6 : 1)
+            .padding(.horizontal, 20)
+        }
+    }
+
     @ViewBuilder
-    private func modeButton(_ target: MatchMode, label: String) -> some View {
-        let selected = mode == target
+    private func modeButton(_ mode: LobbyMode, label: String) -> some View {
+        let isQuick = mode == .quick
+        let selected = isQuick ? (lobbyVM.mode != .joining) : (lobbyVM.mode == .joining)
         Button {
-            mode = target
-            matchmakingError = nil
-            hostedCode = nil
-            waitingForJoin = false
+            if isQuick {
+                lobbyVM.backToIdle()
+            } else {
+                lobbyVM.beginJoinFlow()
+            }
         } label: {
             Text(label)
                 .font(.system(size: 11, weight: .black))
@@ -263,9 +324,7 @@ struct PreDuelView: View {
 
     private var foundView: some View {
         VStack(spacing: 20) {
-            // VS panel
             HStack(alignment: .center, spacing: 12) {
-                // You
                 playerCard(
                     brain: appState.customization,
                     rotLevel: 25,
@@ -276,7 +335,6 @@ struct PreDuelView: View {
                     bg: NeonTheme.purpleDark
                 )
 
-                // VS badge
                 ZStack {
                     Circle()
                         .fill(NeonTheme.pink)
@@ -288,7 +346,6 @@ struct PreDuelView: View {
                         .foregroundColor(.white)
                 }
 
-                // Opponent
                 playerCard(
                     brain: { var c = BrainCustomization(); c.skin = "toxic"; c.expression = "focused"; return c }(),
                     rotLevel: opponent.rotLevel,
@@ -301,13 +358,12 @@ struct PreDuelView: View {
             }
             .padding(.horizontal, 20)
 
-            // Battle info
             HStack(spacing: 0) {
                 battleInfoCell("\(matchDuration)s", label: "DURATION", color: NeonTheme.green)
                 Divider().background(Color.white.opacity(0.2))
-                battleInfoCell("+\(trophyDelta)", label: "TROPHY",   color: NeonTheme.yellow)
+                battleInfoCell("+\(trophyDelta)", label: "TROPHY", color: NeonTheme.yellow)
                 Divider().background(Color.white.opacity(0.2))
-                battleInfoCell("\(boostSlots)",   label: "BOOSTS",   color: NeonTheme.pink)
+                battleInfoCell("\(boostSlots)", label: "BOOSTS", color: NeonTheme.pink)
             }
             .padding(16)
             .background(Color.black.opacity(0.4))
@@ -315,8 +371,8 @@ struct PreDuelView: View {
             .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.white.opacity(0.2), lineWidth: 3))
             .padding(.horizontal, 20)
 
-            if let matchmakingError {
-                Text(matchmakingError)
+            if let err = lobbyVM.errorMessage {
+                Text(err)
                     .font(.system(size: 11, weight: .bold))
                     .foregroundColor(.white)
                     .padding(.horizontal, 12)
@@ -327,7 +383,6 @@ struct PreDuelView: View {
                     .padding(.horizontal, 20)
             }
 
-            // Countdown or Ready
             if phase == .countdown {
                 ZStack {
                     Circle()
@@ -374,7 +429,6 @@ struct PreDuelView: View {
                         .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.black, lineWidth: 2))
                     BrainCharacterView(customization: brain, rotLevel: rotLevel, size: 46)
                 }
-
                 VStack(alignment: .leading, spacing: 2) {
                     Text(name)
                         .font(.system(size: 12, weight: .black))
@@ -386,7 +440,6 @@ struct PreDuelView: View {
                         .foregroundColor(.white.opacity(0.7))
                 }
             }
-
             VStack(spacing: 4) {
                 miniStatRow("ROT", value: rot)
                 miniStatRow("WINS", value: wins)
@@ -435,63 +488,9 @@ struct PreDuelView: View {
             showArena = true
         }
     }
+}
 
-    @MainActor
-    private func createCodeAndWait() async {
-        isSubmitting = true
-        matchmakingError = nil
-        waitingForJoin = false
-        hostedCode = nil
-        do {
-            let host = try await appState.createQuickMatchHost()
-            hostedCode = host.matchCode
-            matchId = host.matchId
-            matchDuration = max(30, host.matchDuration)
-            waitingForJoin = true
-
-            let result = try await appState.waitForOpponentJoin(timeout: 240)
-            guard !Task.isCancelled else { return }
-            opponent = result.opponent
-            matchDuration = max(30, result.matchDuration)
-            trophyDelta = max(0, result.trophyDelta)
-            boostSlots = max(1, result.boostSlots)
-            matchId = result.matchId
-            isSubmitting = false
-            waitingForJoin = false
-            withAnimation { phase = .found }
-        } catch {
-            guard !Task.isCancelled else { return }
-            isSubmitting = false
-            waitingForJoin = false
-            if case MatchmakingError.timeout = error {
-                matchmakingError = "No one joined yet. Generate a new code."
-            } else {
-                matchmakingError = (error as? LocalizedError)?.errorDescription ?? "Unable to generate code. Check Supabase/backend."
-            }
-        }
-    }
-
-    @MainActor
-    private func joinMatchByCode() async {
-        guard mode == .joinCode else { return }
-        let code = joinCode.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !code.isEmpty else { return }
-        isSubmitting = true
-        matchmakingError = nil
-        do {
-            let result = try await appState.joinMatch(matchCode: code)
-            guard !Task.isCancelled else { return }
-            opponent = result.opponent
-            matchDuration = max(30, result.matchDuration)
-            trophyDelta = max(0, result.trophyDelta)
-            boostSlots = max(1, result.boostSlots)
-            matchId = result.matchId
-            isSubmitting = false
-            withAnimation { phase = .found }
-        } catch {
-            guard !Task.isCancelled else { return }
-            isSubmitting = false
-            matchmakingError = (error as? LocalizedError)?.errorDescription ?? "Unable to join match code. Try again."
-        }
-    }
+// Internal lobby mode enum for tab selection in the view
+private enum LobbyMode {
+    case quick, joinCode
 }
