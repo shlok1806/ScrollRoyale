@@ -99,9 +99,15 @@ final class LobbyViewModel: ObservableObject {
                 Self.logger.info("joinMatch SUCCESS — matchId: \(match.id, privacy: .public) status: \(match.status.rawValue, privacy: .public) player2Id: \(match.player2Id ?? "nil", privacy: .public)")
                 self?.currentMatch = match
                 self?.statusMessage = "Match joined. Starting..."
-                // Always poll so the joiner reaches inProgress even if the returned
-                // match status is .waiting due to a timing race on Supabase's side.
-                self?.startPollingMatchState(matchId: match.id)
+                // If joinMatch already returned inProgress (the happy path), the
+                // onChange handler transitions us immediately — no polling needed.
+                // Only start polling if the status is still waiting (timing race edge case).
+                if match.status != .inProgress {
+                    Self.logger.info("joinMatch: status not inProgress yet, starting poll fallback")
+                    self?.startPollingMatchState(matchId: match.id)
+                } else {
+                    Self.logger.info("joinMatch: status already inProgress, skipping poller")
+                }
             }
             .store(in: &cancellables)
     }
@@ -173,6 +179,18 @@ final class LobbyViewModel: ObservableObject {
 
                 Self.logger.debug("poll tick — matchId: \(match.id, privacy: .public) status: \(match.status.rawValue, privacy: .public) player2Id: \(match.player2Id ?? "nil", privacy: .public)")
 
+                // CRITICAL: never let a poll result downgrade a match that is already
+                // confirmed inProgress. This prevents mock/stale get_match responses
+                // from erasing the confirmed inProgress state set by joinMatch.
+                if self.currentMatch?.status == .inProgress && match.status == .waiting {
+                    Self.logger.warning("poll: ignoring stale waiting response — match already inProgress, stopping poller")
+                    DispatchQueue.main.async { [weak self] in
+                        self?.matchPoller?.cancel()
+                        self?.matchPoller = nil
+                    }
+                    return
+                }
+
                 // Hosting timeout check
                 if
                     let started = self.hostingStartedAt,
@@ -182,8 +200,6 @@ final class LobbyViewModel: ObservableObject {
                     Self.logger.warning("Hosting timeout for matchId \(match.id, privacy: .public) — no opponent joined in time")
                     self.errorMessage = "No opponent joined in time. Please create a new match."
                     self.cancelHostedMatch()
-                    // Cancel asynchronously to avoid deallocating the AnyCancellable
-                    // (matchPoller) while its sink closure is still executing.
                     DispatchQueue.main.async { [weak self] in
                         self?.matchPoller?.cancel()
                         self?.matchPoller = nil
@@ -195,7 +211,6 @@ final class LobbyViewModel: ObservableObject {
                 if match.status == .inProgress {
                     Self.logger.info("Match \(match.id, privacy: .public) is now inProgress — stopping poller")
                     self.statusMessage = "Opponent joined. Starting match..."
-                    // Cancel asynchronously so we don't free the AnyCancellable mid-sink.
                     DispatchQueue.main.async { [weak self] in
                         self?.matchPoller?.cancel()
                         self?.matchPoller = nil
