@@ -125,9 +125,6 @@ final class SupabaseAuthService {
             ]
         ])
 
-        let decoder = JSONDecoder()
-        decoder.keyDecodingStrategy = .convertFromSnakeCase
-
         return session.dataTaskPublisher(for: request)
             .tryMap { data, response in
                 guard let http = response as? HTTPURLResponse else {
@@ -137,16 +134,37 @@ final class SupabaseAuthService {
                     let message = String(data: data, encoding: .utf8) ?? "unknown"
                     throw SupabaseClientError.serverError(message)
                 }
-                return data
-            }
-            .decode(type: SupabaseSignUpResponse.self, decoder: decoder)
-            .tryMap { response in
-                guard !response.accessToken.isEmpty else {
+                guard
+                    let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+                    let user = json["user"] as? [String: Any],
+                    let userId = user["id"] as? String
+                else {
+                    throw SupabaseClientError.invalidResponse
+                }
+
+                let accessToken =
+                    (json["access_token"] as? String) ??
+                    (json["accessToken"] as? String) ??
+                    ""
+                guard !accessToken.isEmpty else {
                     throw SupabaseClientError.serverError(
-                        "No access token returned. Enable Anonymous Auth in Supabase Auth settings."
+                        "Anonymous auth did not return a token. Enable Anonymous provider in Supabase Auth settings."
                     )
                 }
-                return response
+
+                let userMetadataRaw =
+                    (user["user_metadata"] as? [String: Any]) ??
+                    (user["userMetadata"] as? [String: Any]) ??
+                    [:]
+                let displayName = userMetadataRaw["display_name"] as? String
+
+                return SupabaseSignUpResponse(
+                    accessToken: accessToken,
+                    user: SupabaseAuthUser(
+                        id: userId,
+                        userMetadata: SupabaseUserMetadata(displayName: displayName)
+                    )
+                )
             }
             .eraseToAnyPublisher()
     }
