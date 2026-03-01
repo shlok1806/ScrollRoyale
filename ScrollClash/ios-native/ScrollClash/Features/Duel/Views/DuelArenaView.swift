@@ -236,7 +236,7 @@ struct DuelArenaView: View {
                 Spacer()
 
                 Button(action: {
-                    isVictory = Bool.random()
+                    isVictory = gameVM.localScore >= gameVM.opponentScore
                     withAnimation(.easeInOut(duration: 0.3)) { showResult = true }
                 }) {
                     Text("FORFEIT")
@@ -278,6 +278,9 @@ struct DuelArenaView: View {
                             .font(.system(size: 9, weight: .bold))
                             .foregroundColor(.white.opacity(0.7))
                         Spacer()
+                        Text("OPP V\(gameVM.opponentVideoIndex + 1)")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundColor(NeonTheme.green.opacity(0.85))
                         Text("SCORE \(Int(gameVM.localScore))")
                             .font(.system(size: 10, weight: .black))
                             .foregroundColor(NeonTheme.yellow)
@@ -286,6 +289,14 @@ struct DuelArenaView: View {
 
                 VStack(spacing: 4) {
                     HStack {
+                        // P1/P2 badge for local player
+                        Text(gameVM.playerTag)
+                            .font(.system(size: 8, weight: .black))
+                            .foregroundColor(.black)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(NeonTheme.purpleLight)
+                            .clipShape(Capsule())
                         Text("\(yourHP)")
                             .font(.system(size: 12, weight: .black))
                             .foregroundColor(NeonTheme.purpleLight)
@@ -293,6 +304,14 @@ struct DuelArenaView: View {
                         Text("\(opponentHP)")
                             .font(.system(size: 12, weight: .black))
                             .foregroundColor(NeonTheme.green)
+                        // P1/P2 badge for opponent
+                        Text(gameVM.opponentTag)
+                            .font(.system(size: 8, weight: .black))
+                            .foregroundColor(.black)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(NeonTheme.green)
+                            .clipShape(Capsule())
                     }
 
                     GeometryReader { geo in
@@ -542,7 +561,7 @@ struct DuelArenaView: View {
             timeLeft = max(0, timeLeft - 1)
         }
         try? await Task.sleep(for: .milliseconds(500))
-        isVictory = Bool.random()
+        isVictory = gameVM.localScore >= gameVM.opponentScore
         showResult = true
     }
 

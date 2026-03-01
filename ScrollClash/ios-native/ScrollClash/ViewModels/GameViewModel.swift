@@ -11,6 +11,7 @@ final class GameViewModel: ObservableObject {
     @Published var localScore: Double = 0
     @Published var opponentScore: Double = 0
     @Published var currentVideoIndex: Int = 0
+    @Published var opponentVideoIndex: Int = 0
     @Published var videoPlaybackTime: Double = 0
     @Published var isLoading = true
     @Published var feedStatusMessage: String?
@@ -64,6 +65,13 @@ final class GameViewModel: ObservableObject {
         guard match.durationSec > 0 else { return 0 }
         return approximateElapsedSeconds / Double(match.durationSec)
     }
+
+    /// Whether the local player occupies the Player 1 slot in this match.
+    var isPlayer1: Bool { match.player1Id == currentUserId }
+    /// Short tag for the local player shown in the HUD (e.g. "P1" or "P2").
+    var playerTag: String { isPlayer1 ? "P1" : "P2" }
+    /// Short tag for the opponent player.
+    var opponentTag: String { isPlayer1 ? "P2" : "P1" }
 
     func loadContent() {
         isLoading = true
@@ -174,10 +182,14 @@ final class GameViewModel: ObservableObject {
     }
 
     private func applyRemoteState(_ state: GameState) {
+        // Track the opponent's current video index for HUD display.
+        opponentVideoIndex = state.currentVideoIndex
+        Self.logger.info("[GameViewModel] applyRemoteState — opponentVideoIndex=\(state.currentVideoIndex, privacy: .public)")
+
         // If the game state carries both scores, apply opponent's score directly.
         if let p2 = state.player2Score {
-            let isPlayer1 = match.player1Id == currentUserId
-            opponentScore = isPlayer1 ? p2 : (state.player1Score ?? opponentScore)
+            let isP1 = match.player1Id == currentUserId
+            opponentScore = isP1 ? p2 : (state.player1Score ?? opponentScore)
         }
     }
 

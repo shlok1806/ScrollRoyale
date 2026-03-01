@@ -96,13 +96,13 @@ struct VideoFeedView: View {
         return Array(lo...hi)
     }
 
-    /// Delay activating (playing) the new page by ~1 s so rapid swipes don't
-    /// start and stop multiple AVPlayers in quick succession.
+    /// Delay activating (playing) the new page by 650 ms — enough to prevent
+    /// rapid-swipe stutter while keeping perceived snap-to-play latency low.
     private func scheduleActivation(to index: Int) {
         pendingActivation?.cancel()
         guard index != activeIndex else { return }
         pendingActivation = Task {
-            try? await Task.sleep(for: .milliseconds(950))
+            try? await Task.sleep(for: .milliseconds(650))
             guard !Task.isCancelled else { return }
             await MainActor.run { activeIndex = index }
         }
