@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import os
 
 enum MatchDuration: Int, CaseIterable, Identifiable {
     case ninety = 90
@@ -104,6 +105,8 @@ final class MockMatchmakingService: MatchmakingServiceProtocol {
 
 /// Supabase implementation using RPC functions from supabase/sql/003_functions.sql.
 final class SupabaseMatchmakingService: MatchmakingServiceProtocol {
+    private static let logger = Logger(subsystem: "com.scrollroyale.app", category: "MatchmakingService")
+
     private let client: SupabaseClient
     private let authService: SupabaseAuthService
 
@@ -113,7 +116,15 @@ final class SupabaseMatchmakingService: MatchmakingServiceProtocol {
     }
 
     func createMatch(duration: MatchDuration) -> AnyPublisher<Match, Error> {
-        authService.ensureAuthenticated(client: client)
+        Self.logger.info("createMatch RPC — duration: \(duration.rawValue, privacy: .public)s")
+        return authService.ensureAuthenticated(client: client)
+            .handleEvents(receiveOutput: { _ in
+                Self.logger.debug("createMatch: auth OK, calling create_match_with_code")
+            }, receiveCompletion: { completion in
+                if case .failure(let e) = completion {
+                    Self.logger.error("createMatch: auth FAILED: \(e.localizedDescription, privacy: .public)")
+                }
+            })
             .flatMap { [client] _ in
                 client.rpc(
                     function: "create_match_with_code",
@@ -126,11 +137,13 @@ final class SupabaseMatchmakingService: MatchmakingServiceProtocol {
                 )
             }
             .tryMap { dto in
+                Self.logger.info("create_match_with_code response — id: \(dto.id, privacy: .public) code: \(dto.matchCode ?? "nil", privacy: .public) status: \(dto.status, privacy: .public)")
                 let match = dto.toAppModel
                 guard
                     let code = match.matchCode?.trimmingCharacters(in: .whitespacesAndNewlines),
                     code.count == 6
                 else {
+                    Self.logger.error("createMatch: no valid 6-char code in response — matchCode: \(dto.matchCode ?? "nil", privacy: .public)")
                     throw SupabaseClientError.serverError(
                         "Create match succeeded but no valid match code was returned. Run latest SQL migrations (001/003) in Supabase."
                     )
@@ -141,7 +154,15 @@ final class SupabaseMatchmakingService: MatchmakingServiceProtocol {
     }
 
     func joinMatch(withCode code: String) -> AnyPublisher<Match, Error> {
-        authService.ensureAuthenticated(client: client)
+        Self.logger.info("joinMatch RPC — code: \(code, privacy: .public)")
+        return authService.ensureAuthenticated(client: client)
+            .handleEvents(receiveOutput: { _ in
+                Self.logger.debug("joinMatch: auth OK, calling join_match_by_code")
+            }, receiveCompletion: { completion in
+                if case .failure(let e) = completion {
+                    Self.logger.error("joinMatch: auth FAILED: \(e.localizedDescription, privacy: .public)")
+                }
+            })
             .flatMap { [client] _ in
                 client.rpc(
                     function: "join_match_by_code",
@@ -149,12 +170,15 @@ final class SupabaseMatchmakingService: MatchmakingServiceProtocol {
                     decodeAs: SupabaseMatchDTO.self
                 )
             }
-            .map { $0.toAppModel }
+            .map { dto in
+                Self.logger.info("join_match_by_code response — id: \(dto.id, privacy: .public) status: \(dto.status, privacy: .public) player2UserId: \(dto.player2UserId ?? "nil", privacy: .public) startedAt: \(String(describing: dto.startedAt), privacy: .public)")
+                return dto.toAppModel
+            }
             .eraseToAnyPublisher()
     }
 
     func getMatch(matchId: String) -> AnyPublisher<Match, Error> {
-        authService.ensureAuthenticated(client: client)
+        return authService.ensureAuthenticated(client: client)
             .flatMap { [client] _ in
                 client.rpc(
                     function: "get_match",
@@ -162,12 +186,21 @@ final class SupabaseMatchmakingService: MatchmakingServiceProtocol {
                     decodeAs: SupabaseMatchDTO.self
                 )
             }
-            .map { $0.toAppModel }
+            .map { dto in
+                Self.logger.debug("get_match response — id: \(dto.id, privacy: .public) status: \(dto.status, privacy: .public) player2UserId: \(dto.player2UserId ?? "nil", privacy: .public)")
+                return dto.toAppModel
+            }
+            .handleEvents(receiveCompletion: { completion in
+                if case .failure(let e) = completion {
+                    Self.logger.error("getMatch FAILED — matchId: \(matchId, privacy: .public) error: \(e.localizedDescription, privacy: .public)")
+                }
+            })
             .eraseToAnyPublisher()
     }
 
     func leaveMatch(matchId: String) -> AnyPublisher<Void, Error> {
-        authService.ensureAuthenticated(client: client)
+        Self.logger.info("leaveMatch RPC — matchId: \(matchId, privacy: .public)")
+        return authService.ensureAuthenticated(client: client)
             .flatMap { [client] _ in
                 client.rpcVoid(
                     function: "leave_match",

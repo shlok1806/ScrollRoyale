@@ -9,6 +9,7 @@ final class GameViewModel: ObservableObject {
     @Published var contentItems: [ContentItem] = []
     @Published var scrollOffset: Double = 0
     @Published var localScore: Double = 0
+    @Published var opponentScore: Double = 0
     @Published var currentVideoIndex: Int = 0
     @Published var videoPlaybackTime: Double = 0
     @Published var isLoading = true
@@ -35,6 +36,7 @@ final class GameViewModel: ObservableObject {
         self.currentUserId = currentUserId
         self.contentService = contentService
         self.syncService = syncService
+        Self.logger.info("GameViewModel init — matchId: \(match.id, privacy: .public) userId: \(currentUserId, privacy: .public) opponentId: \(match.opponentId(for: currentUserId) ?? "nil", privacy: .public)")
     }
 
     var matchCode: String {
@@ -66,21 +68,24 @@ final class GameViewModel: ObservableObject {
     func loadContent() {
         isLoading = true
         feedStatusMessage = nil
+        Self.logger.info("loadContent — matchId: \(self.match.id, privacy: .public)")
         contentService.fetchContentFeed(matchId: match.id)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] completion in
                 self?.isLoading = false
                 if case .failure(let error) = completion {
-                    Self.logger.error("Feed load failed for match \(self?.match.id ?? "unknown", privacy: .public): \(String(describing: error), privacy: .public)")
+                    Self.logger.error("Feed load FAILED for matchId \(self?.match.id ?? "unknown", privacy: .public): \(String(describing: error), privacy: .public)")
                     self?.feedStatusMessage = "No playable videos found for this match."
                 }
             } receiveValue: { [weak self] items in
-                self?.contentItems = items.sorted { $0.order < $1.order }
-                if !(self?.contentItems.isEmpty ?? true) {
+                let sorted = items.sorted { $0.order < $1.order }
+                self?.contentItems = sorted
+                if !sorted.isEmpty {
                     self?.isLoading = false
+                    Self.logger.info("Feed loaded \(sorted.count, privacy: .public) items for matchId \(self?.match.id ?? "unknown", privacy: .public)")
                 }
                 if items.isEmpty {
-                    Self.logger.warning("Feed returned 0 playable items for match \(self?.match.id ?? "unknown", privacy: .public)")
+                    Self.logger.warning("Feed returned 0 playable items for matchId \(self?.match.id ?? "unknown", privacy: .public)")
                     self?.feedStatusMessage = "No playable videos found for this match."
                 } else {
                     self?.feedStatusMessage = nil
@@ -128,8 +133,10 @@ final class GameViewModel: ObservableObject {
     }
 
     func startSync() {
+        let opponentId = match.opponentId(for: currentUserId)
+        Self.logger.info("startSync — matchId: \(self.match.id, privacy: .public) opponentId: \(opponentId ?? "nil", privacy: .public)")
         loadContent()
-        syncService.connect(to: match.id, userId: currentUserId)
+        syncService.connect(to: match.id, userId: currentUserId, opponentUserId: opponentId)
         startTelemetryFlushTimer()
 
         syncService.gameStatePublisher
@@ -142,12 +149,22 @@ final class GameViewModel: ObservableObject {
         syncService.scorePublisher
             .receive(on: DispatchQueue.main)
             .sink { [weak self] snapshot in
+                Self.logger.debug("scorePublisher — own score: \(snapshot.score, privacy: .public)")
                 self?.localScore = snapshot.score
+            }
+            .store(in: &cancellables)
+
+        syncService.opponentScorePublisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] snapshot in
+                Self.logger.debug("opponentScorePublisher — opponent score: \(snapshot.score, privacy: .public)")
+                self?.opponentScore = snapshot.score
             }
             .store(in: &cancellables)
     }
 
     func stopSync() {
+        Self.logger.info("stopSync — matchId: \(self.match.id, privacy: .public)")
         syncService.disconnect()
         telemetryTimer?.cancel()
         telemetryTimer = nil
@@ -155,8 +172,11 @@ final class GameViewModel: ObservableObject {
     }
 
     private func applyRemoteState(_ state: GameState) {
-        // Optional: interpolate remote state for smooth opponent view
-        // For now we could use this to show opponent position in UI
+        // If the game state carries both scores, apply opponent's score directly.
+        if let p2 = state.player2Score {
+            let isPlayer1 = match.player1Id == currentUserId
+            opponentScore = isPlayer1 ? p2 : (state.player1Score ?? opponentScore)
+        }
     }
 
     private func calculateVelocity(newOffset: Double, at currentTime: Date) -> Double {
@@ -191,6 +211,21 @@ final class GameViewModel: ObservableObject {
         syncService.sendTelemetry(events: events, matchId: match.id)
             .sink(receiveCompletion: { _ in }, receiveValue: { _ in })
             .store(in: &cancellables)
+    }
+}
+
+// MARK: - Match extension for opponent derivation
+
+private extension Match {
+    /// Returns the other player's userId given the local player's userId.
+    func opponentId(for userId: String) -> String? {
+        if player1Id == userId {
+            return player2Id
+        } else if player2Id == userId {
+            return player1Id
+        }
+        // Fallback: if userId doesn't match either slot (e.g. demo), return player2Id
+        return player2Id
     }
 }
 

@@ -1,8 +1,11 @@
 import Foundation
 import Combine
+import os
 
 @MainActor
 final class LobbyViewModel: ObservableObject {
+    private static let logger = Logger(subsystem: "com.scrollroyale.app", category: "LobbyViewModel")
+
     enum LobbyMode {
         case idle
         case joining
@@ -26,9 +29,11 @@ final class LobbyViewModel: ObservableObject {
 
     init(matchmakingService: MatchmakingServiceProtocol = MockMatchmakingService.shared) {
         self.matchmakingService = matchmakingService
+        Self.logger.info("LobbyViewModel init — service: \(String(describing: type(of: matchmakingService)), privacy: .public)")
     }
 
     func createMatch() {
+        Self.logger.info("createMatch() called — duration: \(self.selectedDuration.rawValue, privacy: .public)s")
         isLoading = true
         errorMessage = nil
         statusMessage = "Creating your match..."
@@ -39,10 +44,12 @@ final class LobbyViewModel: ObservableObject {
             .sink { [weak self] completion in
                 self?.isLoading = false
                 if case .failure(let error) = completion {
+                    Self.logger.error("createMatch FAILED: \(error.localizedDescription, privacy: .public)")
                     self?.errorMessage = self?.friendlyErrorMessage(error) ?? error.localizedDescription
                     self?.mode = .idle
                 }
             } receiveValue: { [weak self] match in
+                Self.logger.info("createMatch SUCCESS — matchId: \(match.id, privacy: .public) code: \(match.matchCode ?? "nil", privacy: .public) status: \(match.status.rawValue, privacy: .public)")
                 self?.currentMatch = match
                 self?.hostedMatchCode = match.matchCode ?? ""
                 self?.statusMessage = "Share this code. Match starts when opponent joins."
@@ -53,11 +60,13 @@ final class LobbyViewModel: ObservableObject {
     }
 
     func beginJoinFlow() {
+        Self.logger.info("beginJoinFlow() — switching mode to .joining")
         mode = .joining
         errorMessage = nil
     }
 
     func backToIdle() {
+        Self.logger.info("backToIdle() called")
         mode = .idle
         errorMessage = nil
         joinCodeInput = ""
@@ -66,7 +75,9 @@ final class LobbyViewModel: ObservableObject {
 
     func joinMatchWithCode() {
         let code = normalizedJoinCode
+        Self.logger.info("joinMatchWithCode() — code: \(code, privacy: .public) (raw: \(self.joinCodeInput, privacy: .public))")
         guard code.count == 6 else {
+            Self.logger.warning("joinMatchWithCode: code '\(code, privacy: .public)' is not 6 chars, aborting")
             errorMessage = "Enter a valid 6-character match code."
             return
         }
@@ -80,12 +91,17 @@ final class LobbyViewModel: ObservableObject {
             .sink { [weak self] completion in
                 self?.isLoading = false
                 if case .failure(let error) = completion {
+                    Self.logger.error("joinMatch FAILED for code '\(code, privacy: .public)': \(error.localizedDescription, privacy: .public)")
                     self?.errorMessage = self?.friendlyErrorMessage(error) ?? error.localizedDescription
                     self?.statusMessage = ""
                 }
             } receiveValue: { [weak self] match in
+                Self.logger.info("joinMatch SUCCESS — matchId: \(match.id, privacy: .public) status: \(match.status.rawValue, privacy: .public) player2Id: \(match.player2Id ?? "nil", privacy: .public)")
                 self?.currentMatch = match
                 self?.statusMessage = "Match joined. Starting..."
+                // Always poll so the joiner reaches inProgress even if the returned
+                // match status is .waiting due to a timing race on Supabase's side.
+                self?.startPollingMatchState(matchId: match.id)
             }
             .store(in: &cancellables)
     }
@@ -95,6 +111,7 @@ final class LobbyViewModel: ObservableObject {
             backToIdle()
             return
         }
+        Self.logger.info("cancelHostedMatch() — matchId: \(matchId, privacy: .public)")
         matchmakingService.leaveMatch(matchId: matchId)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
@@ -105,6 +122,7 @@ final class LobbyViewModel: ObservableObject {
     }
 
     func reset() {
+        Self.logger.info("reset() — cancelling matchPoller and clearing state")
         matchPoller?.cancel()
         matchPoller = nil
         hostingStartedAt = nil
@@ -126,6 +144,9 @@ final class LobbyViewModel: ObservableObject {
 
     private func startPollingMatchState(matchId: String) {
         matchPoller?.cancel()
+        matchPoller = nil
+        Self.logger.info("startPollingMatchState — matchId: \(matchId, privacy: .public)")
+
         matchPoller = Timer.publish(every: 1.0, on: .main, in: .common)
             .autoconnect()
             .flatMap { [weak self] _ -> AnyPublisher<Match, Never> in
@@ -149,23 +170,36 @@ final class LobbyViewModel: ObservableObject {
             }
             .sink { [weak self] match in
                 guard let self else { return }
+
+                Self.logger.debug("poll tick — matchId: \(match.id, privacy: .public) status: \(match.status.rawValue, privacy: .public) player2Id: \(match.player2Id ?? "nil", privacy: .public)")
+
+                // Hosting timeout check
                 if
                     let started = self.hostingStartedAt,
                     Date().timeIntervalSince(started) >= self.hostingTimeoutSeconds,
                     match.status == .waiting
                 {
+                    Self.logger.warning("Hosting timeout for matchId \(match.id, privacy: .public) — no opponent joined in time")
                     self.errorMessage = "No opponent joined in time. Please create a new match."
                     self.cancelHostedMatch()
-                    self.matchPoller?.cancel()
-                    self.matchPoller = nil
+                    // Cancel asynchronously to avoid deallocating the AnyCancellable
+                    // (matchPoller) while its sink closure is still executing.
+                    DispatchQueue.main.async { [weak self] in
+                        self?.matchPoller?.cancel()
+                        self?.matchPoller = nil
+                    }
                     return
                 }
 
                 self.currentMatch = match
                 if match.status == .inProgress {
+                    Self.logger.info("Match \(match.id, privacy: .public) is now inProgress — stopping poller")
                     self.statusMessage = "Opponent joined. Starting match..."
-                    self.matchPoller?.cancel()
-                    self.matchPoller = nil
+                    // Cancel asynchronously so we don't free the AnyCancellable mid-sink.
+                    DispatchQueue.main.async { [weak self] in
+                        self?.matchPoller?.cancel()
+                        self?.matchPoller = nil
+                    }
                 }
             }
     }

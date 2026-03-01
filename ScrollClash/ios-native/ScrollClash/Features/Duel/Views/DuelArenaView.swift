@@ -14,6 +14,8 @@ struct DuelArenaView: View {
     @State private var videoTimeLeft = 10
     @State private var yourHP = 1000
     @State private var opponentHP = 1000
+    // Baseline opponent HP so we can map Supabase scores to HP deltas
+    private let opponentHPBase = 1000
     @State private var bankedDamage = 0
     @State private var comboMeter = 2
     @State private var multiplier = 1.0
@@ -198,6 +200,18 @@ struct DuelArenaView: View {
         .ignoresSafeArea()
         .onAppear { gameVM.startSync() }
         .onDisappear { gameVM.stopSync() }
+        .onChange(of: gameVM.localScore) { score in
+            // Map own score to HP: higher score = more HP for you (max 1000).
+            // Score is unbounded; clamp so it reads naturally on the bar.
+            yourHP = max(0, min(1000, 200 + Int(score)))
+        }
+        .onChange(of: gameVM.opponentScore) { score in
+            // Opponent's lower HP = they are "losing" — a higher opponent score
+            // means they watched more, so their HP drains faster for the local player.
+            // Simple model: opponent HP = 1000 - their score delta above our score.
+            let delta = max(0, score - gameVM.localScore)
+            opponentHP = max(0, min(1000, 1000 - Int(delta * 2)))
+        }
         .task { await runMatchTimer() }
         .task { await runVideoTimer() }
         .task { await simulateOpponentDamage() }

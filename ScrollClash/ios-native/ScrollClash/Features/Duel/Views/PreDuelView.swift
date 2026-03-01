@@ -1,6 +1,9 @@
 import SwiftUI
+import os
 
 struct PreDuelView: View {
+    private static let logger = Logger(subsystem: "com.scrollroyale.app", category: "PreDuelView")
+
     @EnvironmentObject private var appState: AppState
     @ObservedObject var lobbyVM: LobbyViewModel
     let onDismiss: () -> Void
@@ -106,12 +109,20 @@ struct PreDuelView: View {
         .animation(.easeInOut(duration: 0.3), value: showArena)
         .animation(.easeInOut(duration: 0.3), value: showDemoArena)
         .onChange(of: lobbyVM.currentMatch) { match in
-            guard let match, match.status == .inProgress else { return }
-            // Host: only advance if we actually displayed a code (we created the match)
-            // Joiner: lobbyVM.mode == .joining means we joined via a code
+            let status = match?.status.rawValue ?? "nil"
             let isHost = !lobbyVM.hostedMatchCode.isEmpty
             let isJoiner = lobbyVM.mode == .joining
-            guard isHost || isJoiner else { return }
+            Self.logger.info("onChange(currentMatch) — status: \(status, privacy: .public) isHost: \(isHost, privacy: .public) isJoiner: \(isJoiner, privacy: .public) matchId: \(match?.id ?? "nil", privacy: .public)")
+
+            guard let match, match.status == .inProgress else {
+                Self.logger.debug("onChange: guard failed — status not inProgress or match is nil")
+                return
+            }
+            guard isHost || isJoiner else {
+                Self.logger.warning("onChange: guard failed — neither isHost nor isJoiner (mode=\(String(describing: self.lobbyVM.mode), privacy: .public))")
+                return
+            }
+            Self.logger.info("onChange: TRANSITIONING to .found — matchId: \(match.id, privacy: .public) duration: \(match.durationSec, privacy: .public)s")
             matchDuration = match.durationSec
             phase = .found
         }

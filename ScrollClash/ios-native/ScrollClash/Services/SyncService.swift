@@ -1,13 +1,16 @@
 import Foundation
 import Combine
+import os
 
 /// Protocol for realtime game synchronization and telemetry ingestion.
 protocol SyncServiceProtocol {
     var gameStatePublisher: AnyPublisher<GameState, Never> { get }
     var scorePublisher: AnyPublisher<ScoreSnapshot, Never> { get }
+    var opponentScorePublisher: AnyPublisher<ScoreSnapshot, Never> { get }
     func sendGameState(_ state: GameState, reelId: String?)
     func sendTelemetry(events: [TelemetryEvent], matchId: String) -> AnyPublisher<Void, Error>
-    func connect(to matchId: String, userId: String)
+    /// opponentUserId: the other player's userId — nil if unknown (e.g. demo/mock mode)
+    func connect(to matchId: String, userId: String, opponentUserId: String?)
     func disconnect()
 }
 
@@ -17,11 +20,16 @@ final class MockSyncService: SyncServiceProtocol {
 
     private let gameStateSubject = PassthroughSubject<GameState, Never>()
     private let scoreSubject = PassthroughSubject<ScoreSnapshot, Never>()
+    private let opponentScoreSubject = PassthroughSubject<ScoreSnapshot, Never>()
+
     var gameStatePublisher: AnyPublisher<GameState, Never> {
         gameStateSubject.eraseToAnyPublisher()
     }
     var scorePublisher: AnyPublisher<ScoreSnapshot, Never> {
         scoreSubject.eraseToAnyPublisher()
+    }
+    var opponentScorePublisher: AnyPublisher<ScoreSnapshot, Never> {
+        opponentScoreSubject.eraseToAnyPublisher()
     }
 
     private var timer: AnyCancellable?
@@ -30,7 +38,7 @@ final class MockSyncService: SyncServiceProtocol {
 
     private init() {}
 
-    func connect(to matchId: String, userId: String) {
+    func connect(to matchId: String, userId: String, opponentUserId: String?) {
         currentMatchId = matchId
         currentUserId = userId
         // Simulate receiving updates from opponent
@@ -44,24 +52,31 @@ final class MockSyncService: SyncServiceProtocol {
                     currentVideoIndex: Int.random(in: 0...5),
                     videoPlaybackTime: Double.random(in: 0...30),
                     lastUpdated: Date(),
-                    player1Score: 0,
-                    player2Score: 0
+                    player1Score: nil,
+                    player2Score: nil
                 )
                 self.gameStateSubject.send(state)
-                self.scoreSubject.send(
-                    ScoreSnapshot(
-                        matchId: matchId,
-                        userId: userId,
-                        score: Double.random(in: 0...150),
-                        metrics: ["likes": Double.random(in: 0...12)],
-                        snapshotAt: Date()
-                    )
+                let ownScore = ScoreSnapshot(
+                    matchId: matchId,
+                    userId: userId,
+                    score: Double.random(in: 0...150),
+                    metrics: ["likes": Double.random(in: 0...12)],
+                    snapshotAt: Date()
                 )
+                self.scoreSubject.send(ownScore)
+                let oppId = opponentUserId ?? "mock-opponent"
+                let oppScore = ScoreSnapshot(
+                    matchId: matchId,
+                    userId: oppId,
+                    score: Double.random(in: 0...150),
+                    metrics: ["likes": Double.random(in: 0...12)],
+                    snapshotAt: Date()
+                )
+                self.opponentScoreSubject.send(oppScore)
             }
     }
 
     func sendGameState(_ state: GameState, reelId: String?) {
-        // In real impl: send to backend/WebSocket
         gameStateSubject.send(state)
     }
 
@@ -80,24 +95,36 @@ final class MockSyncService: SyncServiceProtocol {
 }
 
 final class SupabaseSyncService: SyncServiceProtocol {
+    private static let logger = Logger(subsystem: "com.scrollroyale.app", category: "SyncService")
+
     private let client: SupabaseClient
     private let authService: SupabaseAuthService
     private let cacheStore: SupabaseCacheStore
+
     private let gameStateSubject = PassthroughSubject<GameState, Never>()
     private let scoreSubject = PassthroughSubject<ScoreSnapshot, Never>()
+    private let opponentScoreSubject = PassthroughSubject<ScoreSnapshot, Never>()
+
     private var scorePoller: AnyCancellable?
+    /// Stores in-flight telemetry/sendGameState subscriptions so they are not immediately cancelled.
+    private var sendCancellables = Set<AnyCancellable>()
+
     private var currentMatchId: String?
     private var currentUserId: String?
+    private var currentOpponentUserId: String?
     private var connectedAt: Date?
     private var lastScorePollAt: Date = .distantPast
     private var scoreRequestInFlight = false
+    private var opponentRequestInFlight = false
 
     var gameStatePublisher: AnyPublisher<GameState, Never> {
         gameStateSubject.eraseToAnyPublisher()
     }
-
     var scorePublisher: AnyPublisher<ScoreSnapshot, Never> {
         scoreSubject.eraseToAnyPublisher()
+    }
+    var opponentScorePublisher: AnyPublisher<ScoreSnapshot, Never> {
+        opponentScoreSubject.eraseToAnyPublisher()
     }
 
     init(client: SupabaseClient, authService: SupabaseAuthService, cacheStore: SupabaseCacheStore = .shared) {
@@ -106,23 +133,40 @@ final class SupabaseSyncService: SyncServiceProtocol {
         self.cacheStore = cacheStore
     }
 
-    func connect(to matchId: String, userId: String) {
+    func connect(to matchId: String, userId: String, opponentUserId: String?) {
+        Self.logger.info("connect — matchId: \(matchId, privacy: .public) userId: \(userId, privacy: .public) opponentUserId: \(opponentUserId ?? "nil", privacy: .public)")
         currentMatchId = matchId
         currentUserId = userId
+        currentOpponentUserId = opponentUserId
         connectedAt = Date()
         lastScorePollAt = .distantPast
         scoreRequestInFlight = false
-        _ = authService.ensureAuthenticated(client: client)
-            .sink(receiveCompletion: { _ in }, receiveValue: { _ in })
+        opponentRequestInFlight = false
+
+        // Warm up auth — store cancellable so it isn't immediately cancelled.
+        authService.ensureAuthenticated(client: client)
+            .sink(
+                receiveCompletion: { completion in
+                    switch completion {
+                    case .finished:
+                        Self.logger.debug("connect: auth warm-up finished OK")
+                    case .failure(let e):
+                        Self.logger.error("connect: auth warm-up FAILED: \(e.localizedDescription, privacy: .public)")
+                    }
+                },
+                receiveValue: { _ in }
+            )
+            .store(in: &sendCancellables)
 
         if let cachedSnapshot = cacheStore.score(matchId: matchId, userId: userId) {
+            Self.logger.debug("connect: serving cached own score \(cachedSnapshot.score, privacy: .public)")
             scoreSubject.send(cachedSnapshot)
         }
 
-        // Use an adaptive polling fallback: burst on connect, then settle to 1s.
+        // Adaptive polling — burst on connect (0.4 s), settle to 1 s after 5 s.
         scorePoller = Timer.publish(every: 0.35, on: .main, in: .common)
             .autoconnect()
-            .flatMap { [weak self] _ -> AnyPublisher<ScoreSnapshot, Never> in
+            .flatMap { [weak self] _ -> AnyPublisher<Void, Never> in
                 guard
                     let self,
                     let matchId = self.currentMatchId,
@@ -131,39 +175,92 @@ final class SupabaseSyncService: SyncServiceProtocol {
                     return Empty().eraseToAnyPublisher()
                 }
                 let now = Date()
-                let warmupInterval: TimeInterval = 0.4
-                let steadyInterval: TimeInterval = 1.0
                 let elapsed = now.timeIntervalSince(self.connectedAt ?? now)
-                let requiredInterval = elapsed < 5 ? warmupInterval : steadyInterval
+                let requiredInterval: TimeInterval = elapsed < 5 ? 0.4 : 1.0
                 guard now.timeIntervalSince(self.lastScorePollAt) >= requiredInterval else {
                     return Empty().eraseToAnyPublisher()
                 }
-                guard !self.scoreRequestInFlight else {
-                    return Empty().eraseToAnyPublisher()
-                }
                 self.lastScorePollAt = now
-                self.scoreRequestInFlight = true
-                return self.fetchLatestScore(matchId: matchId, userId: userId)
-                    .handleEvents(receiveOutput: { [weak self] snapshot in
-                        self?.cacheStore.setScore(snapshot)
-                    }, receiveCompletion: { [weak self] _ in
-                        self?.scoreRequestInFlight = false
-                    }, receiveCancel: { [weak self] in
-                        self?.scoreRequestInFlight = false
-                    })
-                    .replaceError(
-                        with: self.cacheStore.score(matchId: matchId, userId: userId)
-                            ?? ScoreSnapshot(matchId: matchId, userId: userId, score: 0, metrics: [:], snapshotAt: Date())
-                    )
-                    .eraseToAnyPublisher()
+
+                return self.pollScores(matchId: matchId, userId: userId)
             }
-            .sink { [weak self] snapshot in
+            .sink { _ in }
+    }
+
+    /// Fires parallel requests for own score and (if available) opponent score.
+    private func pollScores(matchId: String, userId: String) -> AnyPublisher<Void, Never> {
+        guard !scoreRequestInFlight else {
+            return Empty().eraseToAnyPublisher()
+        }
+        scoreRequestInFlight = true
+
+        var publishers: [AnyPublisher<Void, Never>] = []
+
+        // Own score
+        let ownPublisher = fetchLatestScore(matchId: matchId, userId: userId)
+            .handleEvents(receiveOutput: { [weak self] snapshot in
+                self?.cacheStore.setScore(snapshot)
+                Self.logger.debug("score poll — own: \(snapshot.score, privacy: .public)")
+            }, receiveCompletion: { [weak self] completion in
+                self?.scoreRequestInFlight = false
+                if case .failure(let e) = completion {
+                    Self.logger.error("score poll FAILED (own) — \(e.localizedDescription, privacy: .public)")
+                }
+            })
+            .replaceError(with: cacheStore.score(matchId: matchId, userId: userId)
+                ?? ScoreSnapshot(matchId: matchId, userId: userId, score: 0, metrics: [:], snapshotAt: Date()))
+            .map { [weak self] snapshot -> Void in
                 self?.scoreSubject.send(snapshot)
             }
+            .eraseToAnyPublisher()
+
+        publishers.append(ownPublisher)
+
+        // Opponent score — only if we know their userId and not already in flight
+        if let opponentId = currentOpponentUserId, !opponentId.isEmpty, !opponentRequestInFlight {
+            opponentRequestInFlight = true
+            let oppPublisher = fetchLatestScore(matchId: matchId, userId: opponentId)
+                .handleEvents(receiveOutput: { snapshot in
+                    Self.logger.debug("score poll — opponent: \(snapshot.score, privacy: .public)")
+                }, receiveCompletion: { [weak self] completion in
+                    self?.opponentRequestInFlight = false
+                    if case .failure(let e) = completion {
+                        Self.logger.error("score poll FAILED (opponent) — \(e.localizedDescription, privacy: .public)")
+                    }
+                })
+                .replaceError(with: ScoreSnapshot(matchId: matchId, userId: opponentId, score: 0, metrics: [:], snapshotAt: Date()))
+                .map { [weak self] snapshot -> Void in
+                    self?.opponentScoreSubject.send(snapshot)
+                    // Also publish both scores via gameStatePublisher so consumers that
+                    // only watch gameStatePublisher see opponent state updates.
+                    if let ownCached = self?.cacheStore.score(matchId: matchId, userId: userId) {
+                        let state = GameState(
+                            scrollOffset: 0,
+                            scrollVelocity: 0,
+                            currentVideoIndex: 0,
+                            videoPlaybackTime: 0,
+                            lastUpdated: Date(),
+                            player1Score: ownCached.score,
+                            player2Score: snapshot.score
+                        )
+                        self?.gameStateSubject.send(state)
+                    }
+                }
+                .eraseToAnyPublisher()
+            publishers.append(oppPublisher)
+        }
+
+        return Publishers.MergeMany(publishers)
+            .collect()
+            .map { _ in () }
+            .eraseToAnyPublisher()
     }
 
     func sendGameState(_ state: GameState, reelId: String?) {
-        guard let matchId = currentMatchId else { return }
+        guard let matchId = currentMatchId else {
+            Self.logger.warning("sendGameState: no currentMatchId, dropping event")
+            return
+        }
         let event = TelemetryEvent(
             reelId: reelId,
             eventType: .scroll,
@@ -174,10 +271,21 @@ final class SupabaseSyncService: SyncServiceProtocol {
                 "velocity": state.scrollVelocity
             ]
         )
-        _ = sendTelemetry(events: [event], matchId: matchId).sink(receiveCompletion: { _ in }, receiveValue: { _ in })
+        // Store the cancellable so the network request is not immediately cancelled.
+        sendTelemetry(events: [event], matchId: matchId)
+            .sink(
+                receiveCompletion: { completion in
+                    if case .failure(let e) = completion {
+                        Self.logger.error("sendGameState telemetry FAILED: \(e.localizedDescription, privacy: .public)")
+                    }
+                },
+                receiveValue: { _ in }
+            )
+            .store(in: &sendCancellables)
     }
 
     func sendTelemetry(events: [TelemetryEvent], matchId: String) -> AnyPublisher<Void, Error> {
+        Self.logger.debug("sendTelemetry — \(events.count, privacy: .public) event(s) for matchId: \(matchId, privacy: .public)")
         let payload = events.map { $0.requestBody }
         return authService.ensureAuthenticated(client: client)
             .flatMap { [client] _ in
@@ -188,16 +296,25 @@ final class SupabaseSyncService: SyncServiceProtocol {
                 )
             }
             .map { (_: Int) in () }
+            .handleEvents(receiveCompletion: { completion in
+                if case .failure(let e) = completion {
+                    Self.logger.error("ingest_telemetry_batch FAILED: \(e.localizedDescription, privacy: .public)")
+                }
+            })
             .eraseToAnyPublisher()
     }
 
     func disconnect() {
+        Self.logger.info("disconnect — matchId: \(self.currentMatchId ?? "nil", privacy: .public)")
         scorePoller?.cancel()
         scorePoller = nil
+        sendCancellables.removeAll()
         currentMatchId = nil
         currentUserId = nil
+        currentOpponentUserId = nil
         connectedAt = nil
         scoreRequestInFlight = false
+        opponentRequestInFlight = false
     }
 
     private func fetchLatestScore(matchId: String, userId: String) -> AnyPublisher<ScoreSnapshot, Error> {
