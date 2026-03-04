@@ -1,7 +1,5 @@
 # HackIllinois: Scroll Royale
 
-# HackIllinois: Scroll Royale
-
 **Demo video:**  
 [![Scroll Royale Demo](https://img.youtube.com/vi/240xIn0RHH4/maxresdefault.jpg)](https://youtu.be/240xIn0RHH4)
 
